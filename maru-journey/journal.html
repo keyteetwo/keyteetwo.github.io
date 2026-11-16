@@ -41,6 +41,15 @@
   .note { font-size: 12px; color: #78909c; }
   footer { text-align: center; color: #78909c; font-size: 12px; padding: 0 16px 34px; line-height: 1.8; }
   @media (max-width: 560px) { .day .shots { grid-template-columns: 1fr; } .hero h1 { font-size: 25px; } }
+
+.pager { display: flex; align-items: center; gap: 10px; justify-content: center; margin: 0 0 18px; flex-wrap: wrap; }
+.pager.bottom { margin: 0 0 8px; }
+.pager button { background: #1565c0; color: #fff; border: none; border-radius: 999px; padding: 8px 18px; font-size: 13.5px; font-weight: 700; cursor: pointer; }
+.pager button:disabled { background: #b0bec5; cursor: default; }
+.pager select { font-size: 13.5px; padding: 7px 10px; border-radius: 8px; border: 1px solid #b0bec5; background: #fff; max-width: 62vw; }
+.pager .pg-count { font-size: 12.5px; color: #607d8b; }
+main.paged .day { display: none; }
+main.paged .day.active { display: block; }
 </style>
 </head>
 <body>
@@ -60,6 +69,12 @@
   </div>
 </div>
 <main>
+<nav class="pager" aria-label="日記のページ送り">
+<button type="button" class="pg-prev">&larr; 前の日</button>
+<select class="pg-select" aria-label="日を選ぶ"></select>
+<span class="pg-count"></span>
+<button type="button" class="pg-next">次の日 &rarr;</button>
+</nav>
 <section class="day">
   <div class="head">
     <span class="dayno">Day 1</span>
@@ -108,10 +123,59 @@
   </div>
 </section>
 <!-- NEXT -->
+<nav class="pager bottom" aria-label="日記のページ送り">
+<button type="button" class="pg-prev">&larr; 前の日</button>
+<select class="pg-select" aria-label="日を選ぶ"></select>
+<span class="pg-count"></span>
+<button type="button" class="pg-next">次の日 &rarr;</button>
+</nav>
 </main>
 <footer>
   写真は旅のイメージとして生成した画像です。金額は、事前に調べた価格を正とし、確認できなかった分は概算です。<br>
   施設一覧の出典: sealcloud（アザラシ施設まとめ）
 </footer>
+<script>
+(function(){
+  var main=document.querySelector('main');
+  var days=Array.prototype.slice.call(main.querySelectorAll('section.day'));
+  if(!days.length) return;
+  main.classList.add('paged');
+  days.forEach(function(d,i){ d.id='day'+(i+1); });
+  var pagers=Array.prototype.slice.call(document.querySelectorAll('.pager'));
+  function label(i){
+    var d=days[i];
+    var no=d.querySelector('.dayno');
+    var h=d.querySelector('h2');
+    var meta=d.querySelector('.meta');
+    var date=meta?meta.textContent.split('\uFF5C')[0].trim():'';
+    return (no?no.textContent.trim():'Day '+(i+1))+' '+(h?h.textContent.trim():'')+(date?'\uFF08'+date+'\uFF09':'');
+  }
+  pagers.forEach(function(p){
+    var sel=p.querySelector('.pg-select');
+    days.forEach(function(d,i){ var o=document.createElement('option'); o.value=i; o.textContent=label(i); sel.appendChild(o); });
+  });
+  var cur=days.length-1;
+  var m=/^#day(\d+)$/.exec(location.hash||'');
+  if(m){ var n=parseInt(m[1],10)-1; if(n>=0&&n<days.length) cur=n; }
+  function show(i,updateHash,scroll){
+    cur=Math.max(0,Math.min(days.length-1,i));
+    days.forEach(function(d,j){ d.classList.toggle('active', j===cur); });
+    pagers.forEach(function(p){
+      p.querySelector('.pg-prev').disabled=(cur===0);
+      p.querySelector('.pg-next').disabled=(cur===days.length-1);
+      p.querySelector('.pg-select').value=cur;
+      p.querySelector('.pg-count').textContent=(cur+1)+' / '+days.length+' \u65E5';
+    });
+    if(updateHash){ try{ history.replaceState(null,'','#day'+(cur+1)); }catch(e){} }
+    if(scroll){ var y=main.getBoundingClientRect().top+window.pageYOffset-10; window.scrollTo(0,Math.max(0,y)); }
+  }
+  pagers.forEach(function(p){
+    p.querySelector('.pg-prev').addEventListener('click',function(){ show(cur-1,true,true); });
+    p.querySelector('.pg-next').addEventListener('click',function(){ show(cur+1,true,true); });
+    p.querySelector('.pg-select').addEventListener('change',function(){ show(parseInt(this.value,10),true,true); });
+  });
+  show(cur,false,false);
+})();
+</script>
 </body>
 </html>
