@@ -2263,26 +2263,59 @@ function updateUI(snap){
   }else $("metaNextDep").textContent="—（移動中）";
   var hl=$("highlightText");
   if(hl){
-    /* 現在地が目的地（ツアー施設）に切り替わったら、みどころもその施設の
-       内容に切り替える。施設での滞在レッグには spot が付かないため、
-       従来の判定だけでは到着後も前の場所のみどころや「移動中」のままに
-       なっていた。滞在中のレッグの行き先、または到着済みの場合は最終
-       区間の行き先が施設名と一致したら、その施設を現在地とする。 */
-    var fac=null,facIdx=-1;
+    /* みどころは「いまの区間」ではなく「今日の目的地（ツアー施設）」で決める。
+       マスター区間のレッグには spot が付かないため、spot 頼みの判定では
+       施設へ向かう移動中はずっと汎用の「移動中です。」のままになり、
+       施設を出た後や、その日の最終地点（夕食の店・ホテル）に着いた後は
+       到着済みなのに最後の区間の「移動中です。」へ戻ってしまっていた。
+       そこで旅程全体の区間から施設を拾い、状態ごとに切り替える：
+       施設に滞在中ならその施設／到着前は次の施設（予告）／到着後は
+       今日訪れた施設を保持する。滞在・待機・宿泊の区間（from と to が
+       同じ場所）では「○○から○○へ移動中です。」とは出さない。 */
+    var facNow=null,facNowIdx=-1,facVisited=null,facVisitedIdx=-1,facNext=null,facNextIdx=-1;
     if(typeof SEAL_TOUR!=="undefined"&&typeof masterNameKey==="function"){
-      var placeNow=(leg.mode==="stay")?leg.to:(S.finished?leg.to:null);
-      if(placeNow){
-        for(var fi2=0;fi2<SEAL_TOUR.length;fi2++){
-          if(masterNameKey(SEAL_TOUR[fi2].name)===masterNameKey(placeNow)){fac=SEAL_TOUR[fi2];facIdx=fi2;break;}
+      var facOf=function(place){
+        if(!place)return null;
+        for(var fi=0;fi<SEAL_TOUR.length;fi++){
+          if(masterNameKey(SEAL_TOUR[fi].name)===masterNameKey(place))return {fac:SEAL_TOUR[fi],idx:fi};
         }
+        return null;
+      };
+      var atPlace=(leg.mode==="stay"||leg.mode==="wait"||leg.mode==="hotel"||S.finished);
+      if(atPlace){var fc0=facOf(leg.to);if(fc0){facNow=fc0.fac;facNowIdx=fc0.idx;}}
+      /* 訪問済み：現在区間より前の区間の行き先／出発地が施設なら到着済み。
+         現在区間が施設での滞在・待機なら、その行き先も訪問済みに含める。 */
+      for(var vi=0;vi<pos.legIdx;vi++){
+        var fv=facOf(j.legs[vi].to)||facOf(j.legs[vi].from);
+        if(fv){facVisited=fv.fac;facVisitedIdx=fv.idx;}
+      }
+      if(atPlace&&facNow){facVisited=facNow;facVisitedIdx=facNowIdx;}
+      else if(leg.from){var ff0=facOf(leg.from);if(ff0){facVisited=ff0.fac;facVisitedIdx=ff0.idx;}}
+      /* 次の施設：現在区間（移動中ならその行き先）以降で最初に出てくる施設 */
+      for(var ni=pos.legIdx;ni<j.legs.length;ni++){
+        var fn=facOf(j.legs[ni].to);
+        if(fn){facNext=fn.fac;facNextIdx=fn.idx;break;}
+      }
+      /* マスター区間の無い日は、同期データの今日の施設／ツアーの現在地から補う */
+      if(!facNext&&!facVisited&&!facNow){
+        var syncFac=null;
+        if(typeof SYNC!=="undefined"&&SYNC&&SYNC.todayFacilityIdx!=null&&SEAL_TOUR[SYNC.todayFacilityIdx])syncFac={fac:SEAL_TOUR[SYNC.todayFacilityIdx],idx:SYNC.todayFacilityIdx};
+        else if(typeof TOUR!=="undefined"&&TOUR&&SEAL_TOUR[TOUR.idx])syncFac={fac:SEAL_TOUR[TOUR.idx],idx:TOUR.idx};
+        if(syncFac){facNext=syncFac.fac;facNextIdx=syncFac.idx;}
       }
     }
-    if(fac)hl.textContent=fac.name+"にいます。"+fac.area+"にあるアザラシのいる施設で、アザラシめぐりツアー"+(facIdx+1)+"か所目の目的地です。";
-    else if(leg.spot)hl.textContent=leg.spot.tip;
+    var facDesc=function(f,idx){return f.area+"にあるアザラシのいる施設で、アザラシめぐりツアー"+(idx+1)+"か所目の目的地です。";};
+    if(leg.spot)hl.textContent=leg.spot.tip;
+    else if(facNow)hl.textContent=facNow.name+"にいます。"+facDesc(facNow,facNowIdx);
+    else if(facVisited&&facNext&&facNext!==facVisited)hl.textContent="今日のみどころは"+facVisited.name+"。"+facDesc(facVisited,facVisitedIdx)+"次は"+facNext.name+"を目指します。";
+    else if(facVisited)hl.textContent="今日のみどころは"+facVisited.name+"。"+facDesc(facVisited,facVisitedIdx)+((leg.mode==="stay"||leg.mode==="wait"||leg.mode==="hotel"||S.finished)?("いまは"+leg.to+"にいます。"):("いまは"+leg.to+"へ移動中です。"));
+    else if(facNext)hl.textContent="次のみどころは"+facNext.name+"。"+facDesc(facNext,facNextIdx);
     else{
       var nx=null,hi;
       for(hi=pos.legIdx;hi<j.legs.length;hi++){if(j.legs[hi].spot){nx=j.legs[hi].spot;break;}}
-      hl.textContent=nx?("次のみどころは"+nx.name+"。"+nx.tip):(leg.from+"から"+leg.to+"へ移動中です。");
+      if(nx)hl.textContent="次のみどころは"+nx.name+"。"+nx.tip;
+      else if(leg.mode==="stay"||leg.mode==="wait"||leg.mode==="hotel"||S.finished)hl.textContent=leg.to+"にいます。";
+      else hl.textContent=leg.from+"から"+leg.to+"へ移動中です。";
     }
   }
   if(sketchActive)renderSketch(snap);
