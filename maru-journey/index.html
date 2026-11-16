@@ -209,6 +209,10 @@ input[type="text"]{width:100%;border:1px solid var(--line);border-radius:10px;pa
 
 /* ============ 右シート「ライブ表示」 ============ */
 .live-sheet{position:absolute;top:14px;right:14px;bottom:14px;width:356px;max-width:calc(100vw - 28px);overflow-y:auto;background:var(--surface);border-radius:16px;box-shadow:var(--shadow);padding:12px 13px 14px;z-index:10;display:flex;flex-direction:column;gap:10px}
+/* シートはスクロールで見せる前提なので、子要素はフレックスで圧縮しない。
+   圧縮を許すと overflow:hidden を持つ子（ストリートビュー小窓など）の
+   最小高さが0になり、内容が増えたときに高さ数pxへ潰れて消えてしまう。 */
+.live-sheet>*{flex-shrink:0}
 .live-sheet[hidden]{display:none}
 .sheet-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .sheet-head h2{font-size:16px;margin:0;display:flex;align-items:center;gap:7px;flex:0 0 auto;white-space:nowrap;word-break:keep-all}
@@ -320,7 +324,7 @@ input[type="text"]{width:100%;border:1px solid var(--line);border-radius:10px;pa
 .sheet-mini .go-open{margin-top:10px;width:100%;border:none;border-radius:10px;background:var(--accent);color:#fff;font-weight:800;padding:9px;font-size:13.5px}
 
 /* ============ ストリートビュー小窓 ============ */
-.sv-mini{border-radius:12px;overflow:hidden;background:#202124;border:1px solid var(--line)}
+.sv-mini{flex:0 0 auto;border-radius:12px;overflow:hidden;background:#202124;border:1px solid var(--line)}
 .sv-mini-body{position:relative;background:var(--surface2)}
 .sv-mini-body iframe{display:block;width:100%;height:190px;border:0;background:#202124}
 .sv-mini-off{padding:18px 14px;font-size:13px;color:var(--ink2);background:var(--surface);min-height:100px;display:flex;align-items:center}
@@ -747,7 +751,7 @@ input[type="text"]{width:100%;border:1px solid var(--line);border-radius:10px;pa
       <div class="card-in">
         <div class="cost-total"><span>累計（計上済み） <b id="costIncurred">¥0</b></span><span>全行程の見込み <b id="costEstimate">¥0</b></span></div>
         <div class="cost-days" id="costDays"><div class="cost-day"><span class="cd-mid">旅程を組むと、ここに日ごとの明細が出ます。</span></div></div>
-        <details class="note-fold"><summary>費用の計算について（説明）</summary><p class="cost-note">金額はすべて、距離と交通手段から見積もった<strong>概算</strong>で、実際の運賃・宿泊費とは異なります。運賃は区間ごとに乗車（出発）した時点で計上し、宿泊費は夜にホテルへチェックインした時点で計上します。徒歩・発車待ち・立ち寄りは ¥0 です。ホテルは1泊 ¥9,000（概算）で計算します。</p></details>
+        <details class="note-fold"><summary>費用の計算について（説明）</summary><p class="cost-note">金額はすべて、距離と交通手段から見積もった<strong>概算</strong>で、実際の運賃・宿泊費とは異なります。運賃は区間ごとに乗車（出発）した時点で計上し、宿泊費は夜にホテルへチェックインした時点で計上します。徒歩・発車待ち・立ち寄りは ¥0 です。ホテルは1泊 ¥9,000（概算）で計算します。その日の費用明細（食事・宿泊・入館料・お土産など）が同期データにある日は、項目名と金額をその日の明細に表示し、合計に含めます（運賃とは別枠で数え、宿泊の明細がある日は自動見積の宿泊費は数えません）。</p></details>
       </div>
     </section>
 
@@ -1132,13 +1136,20 @@ var pendingStart=null;
        時点で自動で正しいツアー表示に切り替える。
    一度 done になったら二度と読み込み中には戻らない（再表示・定期
    再同期は静かに更新する）。 */
-var BOOT={done:false};
+var BOOT={done:false,sheetTopDone:false};
 function endBootLoading(){
   BOOT.done=true;
   try{
     document.body.classList.remove("boot-loading");
     document.body.classList.remove("sync-missing");
   }catch(e){}
+  /* 読み込み直後はライブ表示シートを一番上（scrollTop=0）から見せる。
+     これは初回の校正完了時に1回だけ行う。以後の再同期でこの関数が
+     呼ばれても、利用者が自分でスクロールした位置は勝手に戻さない。 */
+  if(!BOOT.sheetTopDone){
+    BOOT.sheetTopDone=true;
+    try{var sh=$("liveSheet");if(sh)sh.scrollTop=0;}catch(e){}
+  }
 }
 function showSyncMissing(){
   if(typeof SYNC!=="undefined"&&SYNC&&SYNC.applied)return;
@@ -1731,11 +1742,44 @@ function syncMap(force,snap){
 /* ============ ログ・アルバム・写真 ============ */
 function addLog(text){
   var ul=$("logList"),li=document.createElement("li");
+  li.setAttribute("data-ts",String(simNow().getTime()));
   li.innerHTML='<span class="lt2"></span><span></span>';
   li.children[0].textContent=fmtClock(simNow());
   li.children[1].textContent=text;
   ul.insertBefore(li,ul.firstChild);
   while(ul.children.length>30)ul.removeChild(ul.lastChild);
+}
+/* ============ 今日の合間の記録（today.events） ============
+   同期データの today.events（{at, text}）は、その時刻に何をしたかの記録。
+   旅の時計がその時刻を過ぎてから、位置ログへ既存の項目と時刻順に混ぜて出す
+   （時刻が来る前は出さない）。旅が終わった後は旅の時計が止まるため、
+   その場合だけ実時刻で判定し、夕食やホテルでの記録も当日に出せるようにする。
+   表示済みの印は、旅の組み直しでログが消去されるタイミング（beginJourney）で落とす。 */
+var EVENTS_SHOWN={};
+function renderPendingEvents(){
+  if(!S.journey||typeof SYNC==="undefined"||!SYNC||!Array.isArray(SYNC.todayEvents)||!SYNC.todayEvents.length)return;
+  var ul=$("logList");if(!ul)return;
+  var gateMs=S.finished?Date.now():simNow().getTime();
+  var changed=false;
+  SYNC.todayEvents.forEach(function(e){
+    if(!e||e.at>gateMs)return;
+    var k=e.at+"|"+e.text;
+    if(EVENTS_SHOWN[k])return;
+    EVENTS_SHOWN[k]=1;changed=true;
+    var li=document.createElement("li");
+    li.setAttribute("data-ts",String(e.at));
+    li.innerHTML='<span class="lt2"></span><span></span>';
+    li.children[0].textContent=fmtClock(new Date(e.at));
+    li.children[1].textContent=e.text;
+    /* ログは新しい順（先頭が最新）。data-ts を持つ項目の間で時刻順になる位置へ入れる */
+    var kids=ul.children,placed=false;
+    for(var i=0;i<kids.length;i++){
+      var ts=parseInt(kids[i].getAttribute("data-ts")||"",10);
+      if(isFinite(ts)&&ts<e.at){ul.insertBefore(li,kids[i]);placed=true;break;}
+    }
+    if(!placed)ul.appendChild(li);
+  });
+  if(changed){while(ul.children.length>30)ul.removeChild(ul.lastChild);}
 }
 /* ============ アルバムの保存と描画 ============
    アルバムの中身（ツアーの訪問記録カード＋名所の参考写真カード）は
@@ -2247,6 +2291,11 @@ function svProbeHost(n){
       if(SVS.embedFailed)return;
       if(n<1)setTimeout(function(){svProbeHost(n+1);},1200);
       else{
+        /* プローブは補助判定にすぎない。埋め込み本体が既に読み込み
+           できている（load確認済み、またはリソース取得の応答完了が
+           記録されている）場合は、プローブの失敗だけで本体を失敗
+           扱いにしない。本体が正で、失敗の確定は本体側の判定に任せる。 */
+        if(SVS.pendingLoaded||(SVS.pendingSrc&&svResourceState(SVS.pendingSrc)==="ok")){SVS.hostOk=true;return;}
         SVS.hostOk=false;SVS.embedFailed=true;
         if(SVS.loadTimer){clearTimeout(SVS.loadTimer);SVS.loadTimer=null;}
         if(S.journey)svRefresh(true);
@@ -2435,6 +2484,7 @@ setInterval(function(){
     syncMap(false,snap);
   }
   updateUI(snap);
+  try{renderPendingEvents();}catch(e){}
 },250);
 
 /* ============ 簡易時刻表・ホテル泊・運賃／宿泊費（すべて概算） ============
@@ -2549,19 +2599,46 @@ function computeCharges(){
 var COST_SIG="";
 function renderCosts(force){
   if(!S.journey)return;
-  var sig=S.curLeg+"|"+(S.finished?1:0)+"|"+S.journey.legs.length;
+  var expList=(typeof SYNC!=="undefined"&&SYNC&&Array.isArray(SYNC.todayExpenses)&&SYNC.todayDate)?SYNC.todayExpenses:null;
+  var expSig=expList?expList.map(function(e){return e.label+"="+e.yen;}).join(","):"";
+  var sig=S.curLeg+"|"+(S.finished?1:0)+"|"+S.journey.legs.length+"|"+expSig;
   if(!force&&sig===COST_SIG)return;
   COST_SIG=sig;
   var charges=computeCharges();
   var incurred=0,total=0,days={},order=[];
+  /* 今日の費用明細（today.expenses）に宿泊の項目がある日は、その日の
+     自動見積の宿泊費（ホテル泊レッグ分）を数えない。明細（実費）を正とし、
+     宿泊費を二重に数えないため。運賃は明細とは別枠なのでそのまま数える。 */
+  var expDate=null,expKey=null,expDropsHotel=false;
+  if(expList&&expList.length){
+    var ep=SYNC.todayDate.split("-");
+    if(ep.length===3){
+      expDate=new Date(+ep[0],(+ep[1])-1,+ep[2]);
+      expKey=expDate.getFullYear()+"-"+expDate.getMonth()+"-"+expDate.getDate();
+      expDropsHotel=expList.some(function(e){return e.label.indexOf("宿泊")>=0||e.label.indexOf("ホテル")>=0;});
+    }
+  }
   charges.forEach(function(c){
-    total+=c.amount;if(c.incurred)incurred+=c.amount;
     var key=c.date.getFullYear()+"-"+c.date.getMonth()+"-"+c.date.getDate();
-    if(!days[key]){days[key]={date:c.date,fare:0,hotel:0,all:true,any:false};order.push(key);}
+    if(expDropsHotel&&c.kind==="hotel"&&key===expKey)return;
+    total+=c.amount;if(c.incurred)incurred+=c.amount;
+    if(!days[key]){days[key]={date:c.date,fare:0,hotel:0,all:true,any:false,expenses:null,expSum:0};order.push(key);}
     var d=days[key];
     if(c.kind==="hotel")d.hotel+=c.amount;else d.fare+=c.amount;
     if(!c.incurred)d.all=false;else d.any=true;
   });
+  /* 今日の費用明細（食事・宿泊・入館料・お土産など）を、今日の日別明細へ
+     項目名と金額で足し、その日の合計と全体の合計に含める。明細は記録済みの
+     実費なので計上済みとして扱う。区間から計算する運賃とは別枠で加える。 */
+  if(expList&&expList.length&&expKey){
+    var ed=days[expKey];
+    if(!ed){ed=days[expKey]={date:expDate,fare:0,hotel:0,all:true,any:false,expenses:null,expSum:0};order.push(expKey);}
+    ed.expenses=expList;ed.expSum=0;
+    expList.forEach(function(e){ed.expSum+=e.yen;});
+    ed.any=true;
+    total+=ed.expSum;incurred+=ed.expSum;
+  }
+  order.sort(function(a,b){return days[a].date-days[b].date;});
   /* 同期データが適用されている間は、累計費用は同期データの値を正とする */
   if(typeof SYNC!=="undefined"&&SYNC&&SYNC.costYen!=null){incurred=SYNC.costYen;if(total<incurred)total=incurred;}
   $("costIncurred").textContent=fmtYen(incurred);
@@ -2575,11 +2652,12 @@ function renderCosts(force){
   var WD=["日","月","火","水","木","金","土"];
   box.innerHTML="";
   order.forEach(function(key){
-    var d=days[key],sum=d.fare+d.hotel;
+    var d=days[key],sum=d.fare+d.hotel+(d.expSum||0);
     var row=document.createElement("div");row.className="cost-day"+(key===curKey?" cur":"");
     var mid=[];
     if(d.fare>0)mid.push("運賃 "+fmtYen(d.fare));
     if(d.hotel>0)mid.push("宿泊費 "+fmtYen(d.hotel));
+    if(d.expenses)d.expenses.forEach(function(e){mid.push(e.label+" "+fmtYen(e.yen));});
     row.innerHTML='<span class="cd-date"></span><span class="cd-mid"></span><span class="cd-sum"></span><span class="cd-state"></span>';
     row.querySelector(".cd-date").textContent=(d.date.getMonth()+1)+"月"+d.date.getDate()+"日（"+WD[d.date.getDay()]+"）";
     row.querySelector(".cd-mid").textContent=mid.join(" ・ ");
@@ -2598,6 +2676,7 @@ function setPlayIcon(){
 }
 function beginJourney(){
   SVS.lat=null;SVS.lng=null;SVS.leg=-2;SVS.lastReal=0;
+  EVENTS_SHOWN={};
   $("logList").innerHTML="";renderAlbum();
   $("photoToast").classList.remove("show");
   renderLegs();startView();setPlayIcon();syncRateUI();
@@ -4136,7 +4215,17 @@ function renderTourList(){
   updateTourUI();
   if(TOUR.active){
     var cur=$("tourItem"+TOUR.idx);
-    if(cur&&cur.scrollIntoView)cur.scrollIntoView({block:"nearest"});
+    if(cur){
+      /* 現在の施設を「リストの中だけ」で見える位置へ寄せる。
+         scrollIntoView はスクロール可能な祖先すべてを巻き込むため、
+         行程がシートの末尾にある現在はライブ表示シート自体まで
+         スクロールしてしまい、開いた直後のシートが途中から始まる。
+         ここではリスト自身の scrollTop だけを動かし、シートや
+         ページのスクロール位置には触らない。 */
+      var lr=ol.getBoundingClientRect(),cr=cur.getBoundingClientRect();
+      if(cr.top<lr.top)ol.scrollTop-=Math.ceil(lr.top-cr.top);
+      else if(cr.bottom>lr.bottom)ol.scrollTop+=Math.ceil(cr.bottom-lr.bottom);
+    }
   }
 }
 function updateTourUI(){
@@ -4333,7 +4422,8 @@ var SYNC_API_URL="https://api.github.com/gists/966e2e4b0ff2cced3b89d5b7353c8f3f"
 var SYNC_TIMEOUT_MS=20000;
 var SYNC_CACHE_KEY="maruSyncCacheV1";
 var SYNC={costYen:null,lastKey:"",builtIdx:-1,inflight:false,applied:false,
-  todayLegs:null,todayDate:"",todayFacilityIdx:null,buildingKey:"",lastFetch:null,
+  todayLegs:null,todayDate:"",todayFacilityIdx:null,todayExpenses:null,todayEvents:null,
+  buildingKey:"",lastFetch:null,
   diagLog:[],diagMasterUpdatedAt:null,diagMasterUpdatedRaw:null,diagMasterSeen:false,
   source:null,appliedUpdatedMs:null,appliedUpdatedRaw:null,
   cspLog:[],cspSeen:0,
@@ -4453,7 +4543,8 @@ function syncDiagStateLine(){
      window.__maruCspLog へ溜め、ここで取り込んで行にする。
    - 能力マップ：保存・キャッシュ系 API が使えるか・拒否されるか
      （エラー名つき）を1行ずつ残す。
-   - 文脈：origin／iframe内か／onLine／UA の要約を1行で残す。 */
+   - 文脈：iframe内か／onLine／UA の要約を1行で残す（ページ自身の
+     アドレスは含めない）。 */
 function drainCspLog(){
   try{
     var buf=window.__maruCspLog;
@@ -4472,8 +4563,9 @@ function drainCspLog(){
 }
 try{window.__maruCspFlush=function(){drainCspLog();try{renderSyncDiag();}catch(e){}};}catch(e){}
 function computeContextLine(){
-  var origin="(不明)";
-  try{origin=String(location.origin||"(null)");}catch(e){}
+  /* ページ自身のアドレス（origin等）はログに含めない。表示枠の中では
+     内部の転送用アドレスになり、共有用の情報としても意味を持たないため。
+     環境の切り分けに必要なのは iframe 内かどうか・接続状態・UA である。 */
   var inIframe=false;
   try{inIframe=(window.top!==window.self);}catch(e){inIframe=true;}
   var online="(不明)";
@@ -4481,7 +4573,7 @@ function computeContextLine(){
   var ua="";
   try{ua=String(navigator.userAgent||"");}catch(e){}
   if(ua.length>180)ua=ua.slice(0,180)+"…";
-  SYNC.contextLine="文脈: origin="+origin+" / iframe内="+(inIframe?"はい":"いいえ")+" / onLine="+online+" / UA="+ua;
+  SYNC.contextLine="文脈: iframe内="+(inIframe?"はい":"いいえ")+" / onLine="+online+" / UA="+ua;
 }
 function capStorageLine(label){
   try{
@@ -4846,9 +4938,22 @@ function buildMasterToday(legs,dateStr){
   var myGen=++PLAN_GEN; /* 進行中の独自プランニングを無効化し、後勝ちで上書きさせない */
   var facility=(SYNC.todayFacilityIdx!=null&&SEAL_TOUR[SYNC.todayFacilityIdx])?SEAL_TOUR[SYNC.todayFacilityIdx]:SEAL_TOUR[TOUR.idx];
   var facilityName=facility?facility.name:"";
-  /* 端点の解決：引けない地点は、区間列の中で前後に判明している座標で代用する */
+  /* 端点の解決：引けない地点は、区間列の中で前後に判明している座標で代用する。
+     区間に目的地の座標（toLat／toLng）が付いている場合は、名前による解決より
+     座標を優先する（夕食の店・ホテルなど、辞書に無い地点への徒歩移動のため）。
+     次の区間の出発地名が直前区間の到着地名と同じときは、直前区間の到着点
+     （座標で解決済みの点）をそのまま出発点に使い、位置が駅へ戻らないようにする。 */
   var seq=[];
-  legs.forEach(function(l){seq.push(masterResolvePoint(l.from));seq.push(masterResolvePoint(l.to));});
+  legs.forEach(function(l,i){
+    var fp=null;
+    if(i>0&&masterNameKey(l.from)===masterNameKey(legs[i-1].to))fp=seq[i*2-1];
+    if(!fp)fp=masterResolvePoint(l.from);
+    seq.push(fp);
+    var tp=null;
+    if(typeof l.toLat==="number"&&typeof l.toLng==="number")tp={name:l.to,lat:l.toLat,lng:l.toLng};
+    if(!tp)tp=masterResolvePoint(l.to);
+    seq.push(tp);
+  });
   function fillPt(i){
     if(seq[i])return seq[i];
     for(var k=i-1;k>=0;k--)if(seq[k])return seq[k];
@@ -4881,6 +4986,7 @@ function buildMasterToday(legs,dateStr){
         }
       }
       var leg=makeLeg(l.mode,l.from,l.to,r.coords,{note:l.line||""});
+      if(typeof l.toLat==="number"&&typeof l.toLng==="number"){leg.toLat=l.toLat;leg.toLng=l.toLng;}
       leg.duration=(l.arriveAt-l.departAt)/1000; /* 所要時間はマスターの発着時刻そのもの */
       leg.depLabel=fmtClock(new Date(l.departAt));
       leg.departAtMs=l.departAt;leg.arriveAtMs=l.arriveAt;
@@ -4911,6 +5017,10 @@ function buildMasterToday(legs,dateStr){
     var pos=journeyPos(j,tNow());
     S.curLeg=pos.legIdx;
     updateLegRows(pos.legIdx);
+    /* 途中から開いた場合、ストリートビュー小窓の地点も現在位置に
+       合わせ直す（読み込み時に出発地点で組み立てられた表示を、
+       自動更新の間隔を待たずに現在の地点へ寄せる） */
+    try{svRefresh(true);}catch(e){}
     updateUI();syncMap(true);saveState();
   },function(){
     if(SYNC.buildingKey===buildKey)SYNC.buildingKey="";
@@ -4941,7 +5051,7 @@ function applySyncData(data){
      昨日の残りとして使わず、今日分だけを適用する。departAt が未来なら
      その時刻まで現在地で出発待ちにする。legs（マスター区間）が入って
      いれば検証して保持し、その日はページ側で経路を組み直さない。 */
-  var departWait=0,todayDate="",todayLegs=null,todayFacilityIdx=null;
+  var departWait=0,todayDate="",todayLegs=null,todayFacilityIdx=null,todayExpenses=null,todayEvents=null;
   if(data.today&&typeof data.today==="object"&&typeof data.today.date==="string"){
     if(data.today.date===syncJstDateStr(mtTodayDate())){
       todayDate=data.today.date;
@@ -4955,11 +5065,44 @@ function applySyncData(data){
           if(typeof l.from!=="string"||!l.from||typeof l.to!=="string"||!l.to)return;
           var dep=Date.parse(l.departAt),arr=Date.parse(l.arriveAt);
           if(!isFinite(dep)||!isFinite(arr)||arr<=dep)return;
-          nl.push({mode:l.mode,from:l.from,to:l.to,departAt:dep,arriveAt:arr,
-                   line:(typeof l.line==="string"?l.line:"")});
+          var rec={mode:l.mode,from:l.from,to:l.to,departAt:dep,arriveAt:arr,
+                   line:(typeof l.line==="string"?l.line:"")};
+          /* 目的地の座標（任意）：両方そろって範囲内のときだけ採用し、
+             名前による解決より優先する（夕食の店・ホテルへの徒歩など） */
+          if(typeof l.toLat==="number"&&isFinite(l.toLat)&&Math.abs(l.toLat)<=90&&
+             typeof l.toLng==="number"&&isFinite(l.toLng)&&Math.abs(l.toLng)<=180){
+            rec.toLat=l.toLat;rec.toLng=l.toLng;
+          }
+          nl.push(rec);
         });
         nl.sort(function(a,b){return a.departAt-b.departAt;});
         if(nl.length)todayLegs=nl;
+      }
+      /* その日の費用明細（任意）：{label, yen} の配列。食事・宿泊・入館料・
+         お土産などの実費で、旅費・宿泊費の日別明細に表示し合計に含める。 */
+      if(Array.isArray(data.today.expenses)){
+        var exl=[];
+        data.today.expenses.forEach(function(e){
+          if(!e||typeof e!=="object")return;
+          if(typeof e.label!=="string"||!e.label)return;
+          if(typeof e.yen!=="number"||!isFinite(e.yen)||e.yen<0)return;
+          exl.push({label:e.label,yen:Math.round(e.yen)});
+        });
+        if(exl.length)todayExpenses=exl;
+      }
+      /* 合間の記録（任意）：{at, text} の配列。その時刻に何をしたかの記録で、
+         旅の時計がその時刻を過ぎてから位置ログに出す。 */
+      if(Array.isArray(data.today.events)){
+        var evl=[];
+        data.today.events.forEach(function(e){
+          if(!e||typeof e!=="object")return;
+          if(typeof e.text!=="string"||!e.text)return;
+          var at=Date.parse(e.at);
+          if(!isFinite(at))return;
+          evl.push({at:at,text:e.text});
+        });
+        evl.sort(function(a,b){return a.at-b.at;});
+        if(evl.length)todayEvents=evl;
       }
       var depMs=Date.parse(data.today.departAt);
       if(!isFinite(depMs)&&todayLegs)depMs=todayLegs[0].departAt;
@@ -4975,13 +5118,16 @@ function applySyncData(data){
     }
   }
   var legsSig=todayLegs?todayLegs.map(function(l){
-    return l.mode+">"+l.from+">"+l.to+"@"+l.departAt+"-"+l.arriveAt;
+    return l.mode+">"+l.from+">"+l.to+"@"+l.departAt+"-"+l.arriveAt+
+      (typeof l.toLat==="number"?"#"+l.toLat+","+l.toLng:"");
   }).join(","):"";
+  var expSig=todayExpenses?todayExpenses.map(function(e){return e.label+"="+e.yen;}).join(","):"";
+  var evSig=todayEvents?todayEvents.map(function(e){return e.at+":"+e.text;}).join(","):"";
   var done=(t.status==="completed");
   if(idx>=SEAL_TOUR.length){done=true;idx=SEAL_TOUR.length;}
   var active=!done;
   var key=[t.status,idx,startAtMs||0,departWait,todayDate,visited.length,album.length,
-           (typeof t.costTotalYen==="number"?t.costTotalYen:""),legsSig].join("|");
+           (typeof t.costTotalYen==="number"?t.costTotalYen:""),legsSig,expSig,evSig].join("|");
   /* ツアーの進行は同期データを正とし、ローカルの該当項目より優先する */
   TOUR.done=done;
   TOUR.active=active;
@@ -4990,6 +5136,8 @@ function applySyncData(data){
   TOUR.departWaitUntil=departWait;
   if(done){S.tourMode=false;document.body.classList.remove("tour-on");}
   SYNC.costYen=(typeof t.costTotalYen==="number"&&isFinite(t.costTotalYen)&&t.costTotalYen>=0)?Math.round(t.costTotalYen):null;
+  SYNC.todayLegs=todayLegs;SYNC.todayDate=todayDate;SYNC.todayFacilityIdx=todayFacilityIdx;
+  SYNC.todayExpenses=todayExpenses;SYNC.todayEvents=todayEvents;
   applySyncAlbum(album);
   saveTourState();
   renderTourList();
@@ -4998,7 +5146,6 @@ function applySyncData(data){
     var ci=$("costIncurred");if(ci)ci.textContent=fmtYen(SYNC.costYen);
     var mc=$("metaCost");if(mc)mc.textContent=fmtYen(SYNC.costYen);
   }
-  SYNC.todayLegs=todayLegs;SYNC.todayDate=todayDate;SYNC.todayFacilityIdx=todayFacilityIdx;
   SYNC.applied=true;
   SYNC.appliedUpdatedMs=syncUpdatedMs(data);
   SYNC.appliedUpdatedRaw=(data.updatedAt!=null&&data.updatedAt!=="")?String(data.updatedAt):null;
@@ -5210,9 +5357,12 @@ try{
         contextLine:SYNC.contextLine,
         masterToday:!!(S.journey&&S.journey.masterToday),
         todayLegs:SYNC.todayLegs?SYNC.todayLegs.length:0,
+        todayExpenses:SYNC.todayExpenses?SYNC.todayExpenses.map(function(e){return {label:e.label,yen:e.yen};}):null,
+        todayEvents:SYNC.todayEvents?SYNC.todayEvents.map(function(e){return {at:e.at,text:e.text,shown:!!EVENTS_SHOWN[e.at+"|"+e.text]};}):null,
         planBuilds:PLAN_BUILD_COUNT,
         legs:S.journey?S.journey.legs.map(function(l){return {mode:l.mode,from:l.from,to:l.to,
-          dur:l.duration,dep:(l.departAtMs||null),arr:(l.arriveAtMs||null)};}):null,
+          dur:l.duration,dep:(l.departAtMs||null),arr:(l.arriveAtMs||null),
+          toLat:(typeof l.toLat==="number"?l.toLat:null),toLng:(typeof l.toLng==="number"?l.toLng:null)};}):null,
         snap:snap,
         tourAlbumCount:ALBUM_ENTRIES.filter(function(e){return e.kind==="tour";}).length};
     }
