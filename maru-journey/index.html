@@ -1756,11 +1756,15 @@ function syncMap(force,snap){
 }
 
 /* ============ ログ・アルバム・写真 ============ */
-function addLog(text){
+function addLog(text,atDate){
+  /* atDate が渡されたら、その出来事が実際に起きた時刻（区間の予定時刻など）を
+     ログの時刻にする。渡されなければ従来どおり旅の時計の現在時刻。
+     ページを開いた時刻や再同期の時刻を出来事の時刻と取り違えないため。 */
+  var when=(atDate&&!isNaN(atDate.getTime()))?atDate:simNow();
   var ul=$("logList"),li=document.createElement("li");
-  li.setAttribute("data-ts",String(simNow().getTime()));
+  li.setAttribute("data-ts",String(when.getTime()));
   li.innerHTML='<span class="lt2"></span><span></span>';
-  li.children[0].textContent=fmtClock(simNow());
+  li.children[0].textContent=fmtClock(when);
   li.children[1].textContent=text;
   /* ログは他の表示と揃えて時刻順（古いものが上、新しいものが下）。
      30件を超えたら古いもの（先頭）から落とす */
@@ -2525,26 +2529,26 @@ $("svUiBtn").addEventListener("click",function(){
 /* ============ エンジン ============ */
 function onLegEnter(idx,snap){
   var j=S.journey,leg=j.legs[idx];
-  if(idx===0)addLog(j.title+"："+leg.from+"を出発しました");
+  /* ログの時刻は「この区間が始まる予定時刻」（出発時刻＋区間開始までの累計）。
+     ページを開いた／組み直した時刻で打つと、夜に開いただけで出発が夜の時刻に
+     なってしまう。実時間で区間に入った場合も予定時刻≒現在時刻で一致する。 */
+  var evAt=(S.startWall&&j.cumDur&&isFinite(j.cumDur[idx]))?new Date(S.startWall.getTime()+j.cumDur[idx]*1000):simNow();
+  if(idx===0)addLog(j.title+"："+leg.from+"を出発しました",evAt);
   else{
     var prev=j.legs[idx-1];
     /* 区間の終点への到着は「区間到着」として記録する。最終目的地への到着表示は、
        全レッグ終了時にだけ出す（エンジン側の進行度判定）。 */
     var prev=j.legs[idx-1];
-    if(prev.mode!=="stay"&&prev.mode!=="wait"&&prev.mode!=="hotel")addLog(prev.to+"に到着しました（区間の終点です。旅は続いています）");
+    if(prev.mode!=="stay"&&prev.mode!=="wait"&&prev.mode!=="hotel")addLog(prev.to+"に到着しました（区間の終点です。旅は続いています）",evAt);
     if(leg.mode==="stay"){
       if(leg.spot&&!leg.spotDone){leg.spotDone=true;showPhoto(leg.spot);}
     }
-    else if(leg.mode==="wait")addLog(leg.from+"で次の発車（"+(leg.depLabel||"")+"発）まで待機します（簡易時刻表）");
-    else if(leg.mode==="hotel")addLog("夜のため、"+leg.to+"にチェックインしました。翌朝7時に出発します");
-    else addLog(leg.from+"から"+MODES[leg.mode].label+"で"+leg.to+"へ向かいます");
+    else if(leg.mode==="wait")addLog(leg.from+"で次の発車（"+(leg.depLabel||"")+"発）まで待機します（簡易時刻表）",evAt);
+    else if(leg.mode==="hotel")addLog("夜のため、"+leg.to+"にチェックインしました。翌朝7時に出発します",evAt);
+    else addLog(leg.from+"から"+MODES[leg.mode].label+"で"+leg.to+"へ向かいます",evAt);
   }
-  var lf=legFare(leg);
-  if(lf>0){
-    var cum=0;computeCharges().forEach(function(c){if(c.i<=idx)cum+=c.amount;});
-    if(leg.mode==="hotel")addLog("宿泊費（概算）"+fmtYen(lf)+"を計上しました。累計 約"+fmtYen(cum)+"（概算）");
-    else addLog("運賃（概算）を計上："+MODES[leg.mode].label+" "+leg.from+" → "+leg.to+" 約"+fmtYen(lf)+" ／ 累計 約"+fmtYen(cum)+"（概算）");
-  }
+  /* 運賃・宿泊費の「計上」行は位置ログには出さない（費用は「旅費・宿泊費」
+     パネルで見せる。位置ログは位置・出来事の記録に限る） */
   renderCosts(true);
   updateLegRows(idx);
   svRefresh(true,snap);
@@ -2812,6 +2816,10 @@ function loadJourney(j,key,from,to){
   if(S.tourMode&&typeof TOUR!=="undefined"&&TOUR&&TOUR.active&&TOUR.idx===0&&TOUR.startAt&&TOUR.startAt>anchorNow)anchorNow=TOUR.startAt;
   /* 同期データの「今日の出発時刻」が未来の間は、現在地で出発待ちにする（開始待ちと同じ仕組み） */
   if(S.tourMode&&typeof TOUR!=="undefined"&&TOUR&&TOUR.active&&TOUR.departWaitUntil&&TOUR.departWaitUntil>anchorNow)anchorNow=TOUR.departWaitUntil;
+  /* マスター区間の組み立てが開始時刻を指定した場合はそれを正とする（過去でも）。
+     これが無いと読み込み時点の壁時計が出発時刻になり、出発ログの時刻まで
+     開いた時刻にずれてしまう */
+  if(S.masterStartHint){anchorNow=S.masterStartHint;S.masterStartHint=null;}
   S.anchorWall=anchorNow;S.startWall=new Date(anchorNow);S.playing=true;
   applySchedule(j,S.startWall);
   beginJourney();
@@ -5119,10 +5127,13 @@ function buildMasterToday(legs,dateStr){
     document.body.classList.add("tour-on");
     setRouteInputs(legs[0].from,facilityName||legs[legs.length-1].to);
     renderTourList();
-    loadJourney(j,"custom",legs[0].from,facilityName||legs[legs.length-1].to);
-    /* 旅の時計を実時間に一致させる：t=0 を最初の区間の departAt に置き、
-       開いた時刻に応じて途中からなぞる（出発前なら出発地で待つ） */
+    /* 旅の時計を実時間に一致させる：t=0 を最初の区間の departAt に置く。
+       loadJourney の中ですでに最初の区間の入場ログが出るため、開始時刻は
+       読み込みより前に渡しておく（後から付け替えるとログの時刻が開いた
+       時刻のまま残ってしまう） */
     var firstDep=legs[0].departAt,nowMs=Date.now();
+    S.masterStartHint=firstDep;
+    loadJourney(j,"custom",legs[0].from,facilityName||legs[legs.length-1].to);
     S.startWall=new Date(firstDep);
     if(nowMs<firstDep){S.anchorWall=firstDep;S.baseT=0;S.maxT=0;S.playing=true;S.finished=false;TOUR.departWaitUntil=firstDep;}
     else{
