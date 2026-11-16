@@ -675,22 +675,6 @@ input[type="text"]{width:100%;border:1px solid var(--line);border-radius:10px;pa
 
     <button class="sheet-btn" id="followTgl" type="button" aria-pressed="true">カメラ追従：オン</button>
 
-    <section class="panel" id="tourPanel">
-      <div class="tour-panel-head"><h2>アザラシめぐり行程 <span class="sub" id="tourPanelSub">全60か所 ・ ゴールは海遊館</span></h2></div>
-      <ol class="tour-list" id="tourList"></ol>
-      <details class="note-fold" id="syncDiagFold"><summary>同期の診断ログ</summary>
-        <div class="sync-diag" id="syncDiag" hidden>
-          <div class="sync-diag-head">
-            <span class="sync-diag-title">開いてからの取得試行・直近ぶん</span>
-            <button class="sync-copy-btn" id="syncDiagCopyBtn" type="button">ログをコピー</button>
-          </div>
-          <div class="sync-copy-status" id="syncDiagCopyStatus" role="status" aria-live="polite"></div>
-          <pre class="sync-diag-log" id="syncDiagLog" aria-label="同期取得の診断ログ"></pre>
-        </div>
-      </details>
-      <details class="note-fold"><summary>ツアーの進め方と旅のルール（説明）</summary><p class="tour-note">施設名をタップすると地図がその場所へ寄ります（見るだけです。目的地は変わりません）。訪問順は、アザラシ施設まとめ（sealcloudfb.web.app）の国内施設から、閉館した施設と現在アザラシがいない施設を除いた60か所です。ツアーの出発は大阪上本町駅に固定で、スタートは明日7:00です。現在地がどこでも、始まると出発地は自動で大阪上本町駅にセットされます。ツアー中も通常の旅と同じルールです：簡易時刻表で発車待ちをし、夜はホテルに泊まって翌朝7時に再開し、電車を優先してタクシーは最終手段、電車がある区間では長距離バス（高速バス含む）を使わずバスは電車のない短い接続だけ（電車のない区間では高速バスも可）、飛行機は別扱いで常識的に選ばれる長距離では電車があっても可、旅費は区間ごとに概算で計上します。到着すると次の施設が自動で目的地になります。ツアー中は、節目でほかの行き方や乗り継ぎ案の候補は出さず、決まった次の施設へそのまま自動で進みます（行き方や乗り継ぎ案は優先ルールで自動で決まります）。</p></details>
-    </section>
-
     <section class="panel">
       <div class="stats">
         <div class="stat wide"><div class="k">現在地（緯度・経度）</div><div class="v mono" id="stLatLng" style="font-size:13.5px">—</div></div>
@@ -778,6 +762,21 @@ input[type="text"]{width:100%;border:1px solid var(--line);border-radius:10px;pa
     </section>
 
     <details class="note-fold"><summary>データ出典と時刻表モデルについて（説明）</summary><p class="source-note">出典：地図は国土地理院タイル（航空写真＝全国最新写真／標準地図）／ルート計算：道路系は OSRM → FOSSGIS → Valhalla の順に各1回ずつ試行。交通手段は電車を優先して試し、タクシーは他の手段がすべて組めなかった場合の最終手段としてのみ使う／電車は同梱の路線データの駅グラフで乗り換え経路（直通がない場合は乗換駅で路線を乗り継ぐ経路）まで探索し、乗り換えでは同一駅での乗り換え時間（5分）または別駅間の徒歩連絡を入れ、さらに簡易時刻表で次の発車までの待ち時間が発生する／地名・施設検索：地点辞書 → 駅検索（HeartRails Express。国土数値情報（鉄道データ）をベースにした HeartRails の駅データを使っています。小さな私鉄や路面電車の停留場まで収録） → 国土地理院 住所・地名検索 → OpenStreetMap Nominatim の順（ランドマークやショッピングモール等の施設名も対象。同名の地点が複数あるときは候補から選べます）／写真は各立ち寄り先の参考写真です。時刻表はページ内の簡易時刻表（手段ごとの運転間隔と運行時間帯から発車時刻を決めるモデル）で、実際の時刻表とは異なります。運賃・宿泊費は距離と手段からの概算表示です。このページは公開リンク型です。開いた人それぞれの画面で旅が再生されます（全員が同じ瞬間を見守るライブ配信ではありません）。</p></details>
+    <section class="panel" id="tourPanel">
+      <div class="tour-panel-head"><h2>アザラシめぐり行程 <span class="sub" id="tourPanelSub">全60か所 ・ ゴールは海遊館</span></h2></div>
+      <ol class="tour-list" id="tourList"></ol>
+      <details class="note-fold" id="syncDiagFold"><summary>同期の診断ログ</summary>
+        <div class="sync-diag" id="syncDiag" hidden>
+          <div class="sync-diag-head">
+            <span class="sync-diag-title">開いてからの取得試行・直近ぶん</span>
+            <button class="sync-copy-btn" id="syncDiagCopyBtn" type="button">ログをコピー</button>
+          </div>
+          <div class="sync-copy-status" id="syncDiagCopyStatus" role="status" aria-live="polite"></div>
+          <pre class="sync-diag-log" id="syncDiagLog" aria-label="同期取得の診断ログ"></pre>
+        </div>
+      </details>
+      <details class="note-fold"><summary>ツアーの進め方と旅のルール（説明）</summary><p class="tour-note">施設名をタップすると地図がその場所へ寄ります（見るだけです。目的地は変わりません）。訪問順は、アザラシ施設まとめ（sealcloudfb.web.app）の国内施設から、閉館した施設と現在アザラシがいない施設を除いた60か所です。ツアーの出発は大阪上本町駅に固定で、スタートは明日7:00です。現在地がどこでも、始まると出発地は自動で大阪上本町駅にセットされます。ツアー中も通常の旅と同じルールです：簡易時刻表で発車待ちをし、夜はホテルに泊まって翌朝7時に再開し、電車を優先してタクシーは最終手段、電車がある区間では長距離バス（高速バス含む）を使わずバスは電車のない短い接続だけ（電車のない区間では高速バスも可）、飛行機は別扱いで常識的に選ばれる長距離では電車があっても可、旅費は区間ごとに概算で計上します。到着すると次の施設が自動で目的地になります。ツアー中は、節目でほかの行き方や乗り継ぎ案の候補は出さず、決まった次の施設へそのまま自動で進みます（行き方や乗り継ぎ案は優先ルールで自動で決まります）。</p></details>
+    </section>
     <button class="reload-btn" id="reloadBtn" type="button">再読み込み</button>
   </aside>
 
@@ -2174,7 +2173,11 @@ function updateUI(snap){
   var sv=$("svBtn"),note=$("svNote");
   if(leg.mode==="plane"){sv.classList.add("off");note.textContent="飛行中（上空）のため、地上のストリートビューはありません";note.classList.add("show");}
   else if(leg.mode==="ferry"){sv.classList.add("off");note.textContent="フェリーは海の上を進むため、この地点のストリートビューはありません";note.classList.add("show");}
-  else if(leg.mode==="train"){sv.classList.add("off");note.textContent="電車は線路の上を走るため、この地点のストリートビューは開けません";note.classList.add("show");}
+  else if(leg.mode==="train"){
+    var tvp=svResolveView(snap);
+    if(tvp){sv.classList.remove("off");note.classList.remove("show");sv.href=svMapsUrl({pt:tvp.pt},tvp.head);}
+    else{sv.classList.add("off");note.textContent="電車は線路の上を走るため、この地点のストリートビューは開けません";note.classList.add("show");}
+  }
   else{sv.classList.remove("off");note.classList.remove("show");
     sv.href="https://www.google.com/maps/@?api=1&map_action=pano&viewpoint="+pos.pt[1].toFixed(6)+","+pos.pt[0].toFixed(6)+"&heading="+Math.round(pos.head)+"&pitch=0&fov=80";}
   try{updateTourUI();}catch(e){}
@@ -2187,16 +2190,39 @@ var SVS={auto:true,interval:20,lastReal:0,lat:null,lng:null,head:0,leg:-2,open:t
 function svMapsUrl(pos,head){
   return "https://www.google.com/maps/@?api=1&map_action=pano&viewpoint="+pos.pt[1].toFixed(6)+","+pos.pt[0].toFixed(6)+"&heading="+Math.round(head)+"&pitch=0&fov=80";
 }
+/* ストリートビューを開く地点を決める。電車区間では線路上の現在地では
+   ビューが開けないため、区間の座標列から現在地に最も近い駅の位置を使う。
+   区間の座標列は路線データから組んだ場合は全点が駅（始発駅・途中駅・
+   終着駅）なので、最も近い点がそのまま最寄り駅になる。駅に到着・滞在
+   している間は現在地がその駅と重なるので、その駅の位置で開く。
+   使える地点が引けない場合だけ null を返し、その場合に限り従来どおり
+   「開けません」の表示にする。電車以外の区間は現在地そのものを返す。 */
+function svResolveView(snap){
+  var pos=snap.pos,leg=snap.leg;
+  if(leg.mode!=="train")return {pt:pos.pt,head:pos.head,station:null,atStation:false};
+  var coords=leg.coords||[],best=null,bd=Infinity,i;
+  for(i=0;i<coords.length;i++){
+    var d=havM(pos.pt,coords[i]);
+    if(d<bd){bd=d;best=coords[i];}
+  }
+  if(!best)return null;
+  var name=null;
+  if(best===coords[0])name=leg.from;
+  else if(best===coords[coords.length-1])name=leg.to;
+  return {pt:best,head:pos.head,station:name,atStation:bd<=200};
+}
 function svShowFail(snap){
   var frame=$("svFrame"),off=$("svOff"),fail=$("svFail");
   frame.style.display="none";off.hidden=true;fail.hidden=false;
   var pos=snap.pos;
+  var fview=svResolveView(snap);
+  var fpt=fview?fview.pt:pos.pt,fhead=fview?fview.head:pos.head;
   $("svFailPos").textContent="現在位置："+pos.pt[1].toFixed(6)+", "+pos.pt[0].toFixed(6)+"（進行方向 "+compass(pos.head)+"・"+Math.round(pos.head)+"°）";
-  $("svFailLink").href=svMapsUrl(pos,pos.head);
-  $("svOpenLink").href=svMapsUrl(pos,pos.head);
-  $("svCapPlace").textContent=snap.leg.mode==="stay"?(snap.leg.to+"付近"):(snap.leg.from+" → "+snap.leg.to+" の途中");
+  $("svFailLink").href=svMapsUrl({pt:fpt},fhead);
+  $("svOpenLink").href=svMapsUrl({pt:fpt},fhead);
+  $("svCapPlace").textContent=(fview&&fview.station)?(fview.station+"付近"):(snap.leg.mode==="stay"?(snap.leg.to+"付近"):(snap.leg.from+" → "+snap.leg.to+" の途中"));
   $("svCapTime").textContent="更新 "+fmtClock(simNow())+"（旅の時計）";
-  SVS.lat=pos.pt[1];SVS.lng=pos.pt[0];SVS.head=pos.head;SVS.leg=pos.legIdx;SVS.lastReal=Date.now();
+  SVS.lat=fpt[1];SVS.lng=fpt[0];SVS.head=fhead;SVS.leg=pos.legIdx;SVS.lastReal=Date.now();
 }
 function svResourceState(src){
   /* 対象URLのリソース取得実績を見る。応答が返った記録があれば "ok"、
@@ -2289,7 +2315,8 @@ function svRefresh(force,snap){
   if(!snap)snap=snapshot();
   var j=S.journey,pos=snap.pos,leg=snap.leg;
   var frame=$("svFrame"),off=$("svOff");
-  if(leg.mode==="plane"||leg.mode==="train"||leg.mode==="ferry"){
+  var view=svResolveView(snap);
+  if(leg.mode==="plane"||leg.mode==="ferry"||(leg.mode==="train"&&!view)){
     if(SVS.leg!==pos.legIdx){frame.removeAttribute("src");}
     $("svFail").hidden=true;
     frame.style.display="none";off.hidden=false;
@@ -2302,15 +2329,16 @@ function svRefresh(force,snap){
   if(SVS.embedFailed){svShowFail(snap);return;}
   $("svFail").hidden=true;
   off.hidden=true;frame.style.display="";
-  var moved=SVS.lat===null?999:havM([SVS.lng,SVS.lat],[pos.pt[0],pos.pt[1]]);
-  var headDiff=SVS.lat===null?99:Math.abs(((pos.head-SVS.head+540)%360)-180);
+  var vpt=view?view.pt:pos.pt,vhead=view?view.head:pos.head;
+  var moved=SVS.lat===null?999:havM([SVS.lng,SVS.lat],[vpt[0],vpt[1]]);
+  var headDiff=SVS.lat===null?99:Math.abs(((vhead-SVS.head+540)%360)-180);
   if(!force&&moved<8&&headDiff<15&&SVS.leg===pos.legIdx)return;
-  var newSrc=svEmbedUrl(pos.pt[1],pos.pt[0],pos.head);
+  var newSrc=svEmbedUrl(vpt[1],vpt[0],vhead);
   frame.src=newSrc;
   svArmLoadWatch(newSrc);
-  $("svOpenLink").href="https://www.google.com/maps/@?api=1&map_action=pano&viewpoint="+pos.pt[1].toFixed(6)+","+pos.pt[0].toFixed(6)+"&heading="+Math.round(pos.head)+"&pitch=0&fov=80";
-  SVS.lat=pos.pt[1];SVS.lng=pos.pt[0];SVS.head=pos.head;SVS.leg=pos.legIdx;SVS.lastReal=Date.now();
-  $("svCapPlace").textContent=leg.mode==="stay"?(leg.to+"付近"):(leg.from+" → "+leg.to+" の途中");
+  $("svOpenLink").href="https://www.google.com/maps/@?api=1&map_action=pano&viewpoint="+vpt[1].toFixed(6)+","+vpt[0].toFixed(6)+"&heading="+Math.round(vhead)+"&pitch=0&fov=80";
+  SVS.lat=vpt[1];SVS.lng=vpt[0];SVS.head=vhead;SVS.leg=pos.legIdx;SVS.lastReal=Date.now();
+  $("svCapPlace").textContent=(view&&view.station)?(view.station+"付近"):(leg.mode==="stay"?(leg.to+"付近"):(leg.from+" → "+leg.to+" の途中"));
   $("svCapTime").textContent="更新 "+fmtClock(simNow())+"（旅の時計）";
 }
 function svTick(snap){
@@ -4308,8 +4336,7 @@ var SYNC={costYen:null,lastKey:"",builtIdx:-1,inflight:false,applied:false,
   todayLegs:null,todayDate:"",todayFacilityIdx:null,buildingKey:"",lastFetch:null,
   diagLog:[],diagMasterUpdatedAt:null,diagMasterUpdatedRaw:null,diagMasterSeen:false,
   source:null,appliedUpdatedMs:null,appliedUpdatedRaw:null,
-  cspLog:[],cspSeen:0,probeLines:[null,null,null,null],probeStarted:false,
-  reachLines:[null,null,null,null,null,null,null,null,null],reachStarted:false,
+  cspLog:[],cspSeen:0,
   capLines:[],contextLine:""};
 /* ページ側の独自プランニング（buildCustom）が呼ばれた回数。検証用に数える */
 var PLAN_BUILD_COUNT=0;
@@ -4418,16 +4445,12 @@ function syncDiagStateLine(){
   var masterPart="マスター updatedAt: "+(SYNC.diagMasterUpdatedRaw?SYNC.diagMasterUpdatedRaw:(SYNC.diagMasterSeen?"（取得できたが updatedAtが無い）":"未取得"));
   return "状態: "+cachePart+" / "+masterPart;
 }
-/* ============ 診断の強化（CSP・到達プローブ・能力マップ・文脈） ============
+/* ============ 診断の強化（CSP・能力マップ・文脈） ============
    未取得の理由を実環境で切り分けられるよう、取得試行ログに加えて
    次を同じコピー可能なログへ記録する。いずれも表示専用で、取得の
    成否判定や整合性の原則には一切使わない。
    - CSP違反：<head> の早期スクリプトが securitypolicyviolation を
      window.__maruCspLog へ溜め、ここで取り込んで行にする。
-   - 到達プローブ：読み込み時に1回だけ（未取得の間）raw／api／地理院
-     タイルへの fetch と raw への XMLHttpRequest を試し、結果
-     （HTTPステータス、またはエラーの名前とメッセージ）と所要時間を
-     1行ずつ残す。
    - 能力マップ：保存・キャッシュ系 API が使えるか・拒否されるか
      （エラー名つき）を1行ずつ残す。
    - 文脈：origin／iframe内か／onLine／UA の要約を1行で残す。 */
@@ -4509,115 +4532,6 @@ function computeCapabilities(){
     }
   }catch(e){lines[cacheIdx]="Cache API: 拒否（"+syncSummarizeError(e)+"）";}
 }
-var PROBE_GSI_URL="https://cyberjapandata.gsi.go.jp/xyz/std/14/14552/6451.png";
-function probeSetLine(i,line){SYNC.probeLines[i]=line;try{renderSyncDiag();}catch(e){}}
-function probeFetch(i,label,url){
-  var startedAt=Date.now(),t0=syncPerfNow();
-  function done(result){
-    var ms=Math.round(syncPerfNow()-t0);
-    probeSetLine(i,syncDiagTimeStr(startedAt)+" [probe "+label+"] "+result+"（"+ms+"ms）");
-  }
-  try{
-    fetch(url,{cache:"no-store"}).then(function(res){
-      done("HTTP "+(res?res.status:"不明")+(res&&res.type?(" / type="+res.type):""));
-    },function(err){done("失敗: "+syncSummarizeError(err));});
-  }catch(e){done("失敗: "+syncSummarizeError(e));}
-}
-function probeXhr(i,label,url){
-  var startedAt=Date.now(),t0=syncPerfNow();
-  function done(result){
-    var ms=Math.round(syncPerfNow()-t0);
-    probeSetLine(i,syncDiagTimeStr(startedAt)+" [probe "+label+"] "+result+"（"+ms+"ms）");
-  }
-  try{
-    var xhr=new XMLHttpRequest();
-    xhr.open("GET",url,true);
-    xhr.timeout=20000;
-    xhr.onload=function(){done("HTTP "+xhr.status);};
-    xhr.onerror=function(){done("失敗: ネットワークエラー（status "+xhr.status+"）");};
-    xhr.ontimeout=function(){done("失敗: タイムアウト（20000ms）");};
-    xhr.send();
-  }catch(e){done("失敗: "+syncSummarizeError(e));}
-}
-/* 到達プローブはページ読み込み時に1回だけ、まだマスター未取得のときに実行する */
-function runReachabilityProbes(){
-  if(SYNC.probeStarted)return;
-  SYNC.probeStarted=true;
-  if(SYNC.applied)return;
-  probeFetch(0,"fetch raw",SYNC_URL);
-  probeFetch(1,"fetch api",SYNC_API_URL);
-  probeFetch(2,"fetch gsi-tile",PROBE_GSI_URL);
-  probeXhr(3,"xhr raw",SYNC_URL);
-}
-/* ============ 到達マップ（候補ホストへの到達可否の実測） ============
-   表示枠のポリシー（CSP）がどの外部ホストへの取得なら通すのかを
-   実測で洗い出すため、未取得のときに1回だけ、候補URLへ並行して
-   GET の fetch（mode:"cors"、credentials:"omit"、各6秒タイムアウト）を
-   試し、候補ごとに「URL・結果・所要ms」を1行ずつ同じ診断ログへ残す。
-   HTTPステータスが返れば（404でも）「到達」として記録し、TypeError 等で
-   即失敗した場合はエラーの名前とメッセージで記録して区別できるように
-   する。ブロックされた場合は CSP違反の行が時刻つきで同じログに並ぶ
-   ので、違反行と対応づけられる。記録は表示専用で、取得の成否判定や
-   整合性の原則には一切使わない。 */
-var REACH_TIMEOUT_MS=6000;
-function reachSelfFaviconUrl(){
-  try{
-    var o=new URL(location.href).origin;
-    if(o&&o!=="null")return o+"/favicon.ico";
-    return String(o)+"/favicon.ico";
-  }catch(e){
-    return "/favicon.ico";
-  }
-}
-function reachCandidates(){
-  return [
-    "https://raw.githubusercontent.com/",
-    "https://github.com/",
-    "https://cdn.jsdelivr.net/",
-    "https://cdn.statically.io/",
-    "https://raw.githack.com/",
-    "https://storage.googleapis.com/",
-    "https://s3.amazonaws.com/",
-    "https://muse.ai/",
-    reachSelfFaviconUrl()
-  ];
-}
-function reachSetLine(i,line){SYNC.reachLines[i]=line;try{renderSyncDiag();}catch(e){}}
-function reachFetch(i,url){
-  var startedAt=Date.now(),t0=syncPerfNow(),finished=false,timer=null;
-  function done(result){
-    if(finished)return;finished=true;
-    if(timer){try{clearTimeout(timer);}catch(e){} timer=null;}
-    var ms=Math.round(syncPerfNow()-t0);
-    reachSetLine(i,syncDiagTimeStr(startedAt)+" [reach] "+url+" "+result+"（"+ms+"ms）");
-  }
-  reachSetLine(i,syncDiagTimeStr(startedAt)+" [reach] "+url+" 計測中…");
-  try{
-    var opts={method:"GET",mode:"cors",credentials:"omit",cache:"no-store"};
-    if(typeof AbortController!=="undefined"){
-      var ctrl=new AbortController();
-      opts.signal=ctrl.signal;
-      timer=setTimeout(function(){try{ctrl.abort();}catch(e){}},REACH_TIMEOUT_MS);
-    }
-    fetch(url,opts).then(function(res){
-      done("到達: HTTP "+(res?res.status:"不明")+(res&&res.type?(" / type="+res.type):""));
-    },function(err){
-      if(err&&err.name==="AbortError")done("失敗: AbortError: タイムアウト（"+REACH_TIMEOUT_MS+"msで中断） "+syncSummarizeError(err));
-      else done("失敗: "+syncSummarizeError(err));
-    });
-  }catch(e){done("失敗: "+syncSummarizeError(e));}
-  /* fetch が settle しない万一の場合でも、結果つきの1行を残すための保険 */
-  setTimeout(function(){if(!finished)done("失敗: タイムアウト（"+REACH_TIMEOUT_MS+"msを超過しても応答なし）");},REACH_TIMEOUT_MS+1500);
-}
-/* 到達マップはページ読み込み時に1回だけ、まだマスター未取得のときに
-   候補へ並行して実行する */
-function runReachMapProbes(){
-  if(SYNC.reachStarted)return;
-  SYNC.reachStarted=true;
-  if(SYNC.applied)return;
-  var urls=reachCandidates();
-  for(var ri=0;ri<urls.length;ri++)(function(idx,u){reachFetch(idx,u);})(ri,urls[ri]);
-}
 function syncDiagText(){
   drainCspLog();
   var lines=[];
@@ -4625,11 +4539,6 @@ function syncDiagText(){
   for(var ci=0;ci<SYNC.capLines.length;ci++)lines.push(SYNC.capLines[ci]);
   if(SYNC.cspLog.length){for(var vi=0;vi<SYNC.cspLog.length;vi++)lines.push(SYNC.cspLog[vi]);}
   else lines.push("CSP違反: なし（記録されていません）");
-  for(var pi=0;pi<SYNC.probeLines.length;pi++)if(SYNC.probeLines[pi])lines.push(SYNC.probeLines[pi]);
-  if(SYNC.reachStarted||SYNC.reachLines.some(function(x){return !!x;})){
-    lines.push("到達マップ");
-    for(var rli=0;rli<SYNC.reachLines.length;rli++)if(SYNC.reachLines[rli])lines.push(SYNC.reachLines[rli]);
-  }
   for(var di=0;di<SYNC.diagLog.length;di++)lines.push(SYNC.diagLog[di]);
   lines.push(syncDiagStateLine());
   return lines.join("\n");
@@ -4638,9 +4547,7 @@ function renderSyncDiag(){
   var text=null,has=false;
   try{
     drainCspLog();
-    has=!!(SYNC.contextLine||SYNC.capLines.length||SYNC.diagLog.length||SYNC.cspLog.length
-      ||SYNC.probeLines.some(function(x){return !!x;})
-      ||SYNC.reachLines.some(function(x){return !!x;}));
+    has=!!(SYNC.contextLine||SYNC.capLines.length||SYNC.diagLog.length||SYNC.cspLog.length);
     if(has)text=syncDiagText();
   }catch(e){}
   [["syncDiag","syncDiagLog"],["syncDiagM","syncDiagLogM"]].forEach(function(pair){
@@ -5209,13 +5116,10 @@ function maruSyncFetchNow(){
 /* ページを開いたとき・タブが再び表示状態に戻ったとき・bfcache から
    復帰したとき（pageshow）・フォーカスが戻ったときに取り直す。
    開きっぱなしでも数分おきに取り直し、朝の公開を取りこぼさない。 */
-/* 診断の初期化：文脈・能力マップを記録し、CSP違反の取り込みと
-   到達プローブ（読み込み時に1回だけ・未取得のとき）を開始する */
+/* 診断の初期化：文脈・能力マップを記録し、CSP違反を取り込む */
 try{computeContextLine();}catch(e){}
 try{computeCapabilities();}catch(e){}
 try{drainCspLog();}catch(e){}
-try{runReachabilityProbes();}catch(e){}
-try{runReachMapProbes();}catch(e){}
 try{renderSyncDiag();}catch(e){}
 maruSyncFetchNow();
 document.addEventListener("visibilitychange",function(){
@@ -5302,9 +5206,8 @@ try{
         diagLog:SYNC.diagLog.slice(),
         diagText:(typeof syncDiagText==="function")?syncDiagText():"",
         cspLog:SYNC.cspLog.slice(),cspEarly:(window.__maruCspLog||[]).length,
-        probeLines:SYNC.probeLines.slice(),capLines:SYNC.capLines.slice(),
-        reachLines:SYNC.reachLines.slice(),reachStarted:SYNC.reachStarted,
-        contextLine:SYNC.contextLine,probeStarted:SYNC.probeStarted,
+        capLines:SYNC.capLines.slice(),
+        contextLine:SYNC.contextLine,
         masterToday:!!(S.journey&&S.journey.masterToday),
         todayLegs:SYNC.todayLegs?SYNC.todayLegs.length:0,
         planBuilds:PLAN_BUILD_COUNT,
