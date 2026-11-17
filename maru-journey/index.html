@@ -2236,7 +2236,7 @@ function updateUI(snap){
   var njb=$("nextJourneyBtn");if(njb)njb.hidden=!S.finished;
   $("metaPlace").textContent=leg.mode==="stay"?leg.to:(leg.from+" → "+leg.to);
   var remain=j.totalDur-t;
-  $("metaEta").textContent=S.finished?"到着済み":(fmtClock(new Date(simNow().getTime()+remain*1000))+"（残り"+fmtDur(remain)+"）");
+  $("metaEta").textContent=j.hold?"次の行程データ待ち":(S.finished?"到着済み":(fmtClock(new Date(simNow().getTime()+remain*1000))+"（残り"+fmtDur(remain)+"）"));
   $("metaNext").textContent=S.finished?"—":nextTransferText(pos);
   $("metaClock").textContent=fmtClock(simNow());
   $("metaDepart").textContent=fmtClock(S.startWall);
@@ -2585,7 +2585,9 @@ setInterval(function(){
        目的地に着いた後も長時間「滞在中」のまま終了せず、次の旅へ進めない。
        途中の立ち寄り滞在は対象外で、従来どおり時間切れで次レッグへ自動出発する。 */
     var atFinalStay=pos.legIdx===S.journey.legs.length-1&&snap.leg.mode==="stay"&&t>=S.journey.cumDur[S.journey.legs.length-1];
-    if((t>=S.journey.totalDur&&atRouteEnd)||atFinalStay){
+    /* 到着地で待機するだけの旅（hold）は終了判定の対象外：単一の滞在区間でも
+       「到着＝終了」にはせず、次の行程データが届いて組み直されるまで待つ */
+    if(!S.journey.hold&&((t>=S.journey.totalDur&&atRouteEnd)||atFinalStay)){
       S.finished=true;S.playing=false;setPlayIcon();
       addLog("目的地「"+S.journey.legs[S.journey.legs.length-1].to+"」に到着しました。旅は終了です");
       updateLegRows(S.journey.legs.length);
@@ -3676,7 +3678,7 @@ function schedulePlanRetry(){
   PLAN_RETRY_TIMER=setTimeout(function(){
     PLAN_RETRY_TIMER=null;
     if(S.journey||!PLAN_LAST)return;
-    if(typeof SYNC!=="undefined"&&SYNC&&SYNC.todayLegs)return; /* マスター区間の日は組み直しで世代を進めない */
+    if(typeof SYNC!=="undefined"&&SYNC&&(SYNC.todayLegs||SYNC.holdPoint))return; /* マスター区間／到着地待機の日は組み直しで世代を進めない */
     buildCustom(PLAN_LAST.fromText,PLAN_LAST.toText,PLAN_LAST.resume||null,PLAN_LAST.startOv||null);
   },30000);
 }
@@ -3700,14 +3702,15 @@ function completePlan(legs,fromText,toText,resume,noteText,gen){
   if(gen!=null&&gen!==PLAN_GEN)return Promise.resolve(false);
   /* マスター区間（today.legs）がある日は、ページ側の独自プランニング
      （簡易時刻表で組んだ旅）でマスターの旅を上書きしない。その日は
-     buildMasterToday が区間をなぞる旅だけを表示する。 */
-  if(typeof SYNC!=="undefined"&&SYNC&&SYNC.todayLegs&&typeof TOUR!=="undefined"&&TOUR&&TOUR.active)return Promise.resolve(false);
+     buildMasterToday が区間をなぞる旅だけを表示する。区間が無く到着地で
+     待機している日（holdPoint）も同じく上書きしない。 */
+  if(typeof SYNC!=="undefined"&&SYNC&&(SYNC.todayLegs||SYNC.holdPoint)&&typeof TOUR!=="undefined"&&TOUR&&TOUR.active)return Promise.resolve(false);
   var allow=allowedModes();
   var usedBad=legs.some(function(l){return l.mode!=="stay"&&l.mode!=="wait"&&l.mode!=="hotel"&&!allow[l.mode];});
   if(usedBad){$("planMsg").textContent="許可されていない手段を含むため、この旅程は使えません。";return Promise.resolve(false);}
   function finish(){
     if(gen!=null&&gen!==PLAN_GEN)return false; /* 仕上げ中に新しい組み立てが始まっていたら上書きしない */
-    if(typeof SYNC!=="undefined"&&SYNC&&SYNC.todayLegs&&typeof TOUR!=="undefined"&&TOUR&&TOUR.active)return false; /* マスター区間の日は独自プランニングを表示しない */
+    if(typeof SYNC!=="undefined"&&SYNC&&(SYNC.todayLegs||SYNC.holdPoint)&&typeof TOUR!=="undefined"&&TOUR&&TOUR.active)return false; /* マスター区間／到着地待機の日は独自プランニングを表示しない */
     var j=buildJourney(fromText+" から "+toText+" への旅",legs);
     hidePlanPanels();
     $("planMsg").textContent=noteText||"";
@@ -4547,6 +4550,7 @@ var SYNC_TIMEOUT_MS=20000;
 var SYNC_CACHE_KEY="maruSyncCacheV1";
 var SYNC={costYen:null,lastKey:"",builtIdx:-1,inflight:false,applied:false,
   todayLegs:null,todayDate:"",todayFacilityIdx:null,todayExpenses:null,todayEvents:null,
+  dayIsPast:false,holdPoint:null,
   buildingKey:"",lastFetch:null,
   diagLog:[],diagMasterUpdatedAt:null,diagMasterUpdatedRaw:null,diagMasterSeen:false,
   source:null,appliedUpdatedMs:null,appliedUpdatedRaw:null,
@@ -5006,6 +5010,28 @@ function syncBuildLeg(){
   renderTourList();
   buildCustom(fromName,dest.name,null,startOv);
 }
+/* ============ 区間が無い日の待機（到着済みの地点で止める） ============
+   マスターにその日の区間が無い日でも、独自プランニングで前区間を
+   開いた時刻から再生し直してはならない（まるが前の施設へ戻ってしまう）。
+   時刻ゲートを通った到着記録（album／visited）から決まる最新の到着地に
+   滞在区間だけの旅を置き、次の行程データが届くまでそこで待機させる。
+   位置は滞在区間の座標で固定され、状態表示も「○○にいます」になる。 */
+function buildHoldJourney(){
+  var hp=SYNC.holdPoint;if(!hp)return;
+  ++PLAN_GEN; /* 進行中の独自プランニングを無効化し、後勝ちで上書きさせない */
+  var leg=makeLeg("stay",hp.name,hp.name,[[hp.lng,hp.lat]],{staySec:24*3600,note:"次の行程データ待ち"});
+  var j=buildJourney("到着地で待機（マスター区間なし）",[leg]);
+  j.hold=true;
+  SYNC.builtIdx=TOUR.idx;
+  TOUR.fromName=hp.name;TOUR.advancing=false;
+  S.tourMode=true;
+  S.choice=null;S.choiceFor=-1;var cp=$("choicePanel");if(cp)cp.hidden=true;
+  document.body.classList.add("tour-on");
+  var dest=(typeof SEAL_TOUR!=="undefined"&&SEAL_TOUR[TOUR.idx])?SEAL_TOUR[TOUR.idx].name:hp.name;
+  setRouteInputs(hp.name,dest);
+  renderTourList();
+  loadJourney(j,"custom",hp.name,dest);
+}
 /* ============ マスター区間（today.legs）をなぞる旅の組み立て ============
    同期データに今日の区間列（legs）が入っている日は、ページ側では
    経路も時刻表も組み直さない。各区間の departAt／arriveAt をそのまま
@@ -5188,13 +5214,23 @@ function applySyncData(data){
   else idx=Math.min(SEAL_TOUR.length,visited.length);
   var startAtMs=Date.parse(t.startAt);
   if(!isFinite(startAtMs))startAtMs=null;
-  /* today：日付（日本時間）が今日より未来なら丸ごと無視する。過去の日付も
-     昨日の残りとして使わず、今日分だけを適用する。departAt が未来なら
+  /* today：日付（日本時間）が今日より未来なら丸ごと無視する（未来の行程を
+     先に見せないため）。今日の日付ならその日の行程として適用する。
+     過去の日付の場合は「いちばん新しいマスターの日」として保持する：
+     次の日のデータがまだ上がっていない間も、その日の区間を実時刻に
+     アンカーしてなぞれば、再生はその日の最終到着地（宿など）で止まる。
+     過去の today を捨ててページ側の独自プランニングに落とすと、区間を
+     開いた時刻から組み直してしまい、まるが前日の出発地へ戻ってしまう
+     （2026-11-18 未明に伊勢へ戻った不具合の原因）。departAt が未来なら
      その時刻まで現在地で出発待ちにする。legs（マスター区間）が入って
      いれば検証して保持し、その日はページ側で経路を組み直さない。 */
   var departWait=0,todayDate="",todayLegs=null,todayFacilityIdx=null,todayExpenses=null,todayEvents=null;
+  var dayIsPast=false;
   if(data.today&&typeof data.today==="object"&&typeof data.today.date==="string"){
-    if(data.today.date===syncJstDateStr(mtTodayDate())){
+    var todayStr=syncJstDateStr(mtTodayDate());
+    var dayOk=/^\d{4}-\d{2}-\d{2}$/.test(data.today.date)&&data.today.date<=todayStr;
+    if(dayOk){
+      dayIsPast=data.today.date<todayStr;
       todayDate=data.today.date;
       if(typeof data.today.facilityIdx==="number"&&isFinite(data.today.facilityIdx))
         todayFacilityIdx=Math.max(0,Math.min(SEAL_TOUR.length-1,Math.round(data.today.facilityIdx)));
@@ -5264,6 +5300,26 @@ function applySyncData(data){
       }
     }
   }
+  /* 区間（legs）が無い日の待機地点：時刻ゲートを通った album／visited の
+     うち最も新しい到着施設。無ければ currentIndex の直前の施設。
+     区間が無いからといって独自プランニングで前区間を開いた時刻から
+     再生し直すと、まるが前の施設へ戻ってしまうため、到着済みの地点で
+     待機させるために使う（buildHoldJourney）。ツアー開始前（到着記録が
+     無く idx=0）なら null のままで、従来の開始待ちの組み立てに任せる。 */
+  var holdPoint=null;
+  (function(){
+    var best=null,bestAt=-1;
+    [album,visited].forEach(function(list){
+      list.forEach(function(e){
+        if(typeof e.idx!=="number"||!SEAL_TOUR[e.idx])return;
+        var at=Date.parse(e.arrivedAt);
+        if(!isFinite(at))return;
+        if(at>bestAt){bestAt=at;best=e.idx;}
+      });
+    });
+    if(best==null&&idx>0&&idx<=SEAL_TOUR.length)best=idx-1;
+    if(best!=null&&SEAL_TOUR[best])holdPoint={name:SEAL_TOUR[best].name,lat:SEAL_TOUR[best].lat,lng:SEAL_TOUR[best].lng};
+  })();
   var legsSig=todayLegs?todayLegs.map(function(l){
     return l.mode+">"+l.from+">"+l.to+"@"+l.departAt+"-"+l.arriveAt+
       (typeof l.toLat==="number"?"#"+l.toLat+","+l.toLng:"");
@@ -5274,7 +5330,8 @@ function applySyncData(data){
   if(idx>=SEAL_TOUR.length){done=true;idx=SEAL_TOUR.length;}
   var active=!done;
   var key=[t.status,idx,startAtMs||0,departWait,todayDate,visited.length,album.length,
-           (typeof t.costTotalYen==="number"?t.costTotalYen:""),legsSig,expSig,evSig].join("|");
+           (typeof t.costTotalYen==="number"?t.costTotalYen:""),legsSig,expSig,evSig,
+           (holdPoint?holdPoint.name:"")].join("|");
   /* ツアーの進行は同期データを正とし、ローカルの該当項目より優先する */
   TOUR.done=done;
   TOUR.active=active;
@@ -5285,6 +5342,7 @@ function applySyncData(data){
   SYNC.costYen=(typeof t.costTotalYen==="number"&&isFinite(t.costTotalYen)&&t.costTotalYen>=0)?Math.round(t.costTotalYen):null;
   SYNC.todayLegs=todayLegs;SYNC.todayDate=todayDate;SYNC.todayFacilityIdx=todayFacilityIdx;
   SYNC.todayExpenses=todayExpenses;SYNC.todayEvents=todayEvents;
+  SYNC.dayIsPast=dayIsPast;SYNC.holdPoint=holdPoint;
   applySyncAlbum(album);
   saveTourState();
   renderTourList();
@@ -5302,10 +5360,12 @@ function applySyncData(data){
      legs が無くなったら従来の組み立てへ、それぞれ切り替える。 */
   var needBuild=active&&(key!==SYNC.lastKey||SYNC.builtIdx!==TOUR.idx||!S.tourMode||!S.journey
     ||(todayLegs&&!(S.journey&&S.journey.masterToday))
-    ||(!todayLegs&&S.journey&&S.journey.masterToday));
+    ||(!todayLegs&&S.journey&&S.journey.masterToday)
+    ||(!todayLegs&&holdPoint&&S.journey&&!S.journey.hold&&!S.journey.masterToday));
   SYNC.lastKey=key;
   if(needBuild){
     if(todayLegs)buildMasterToday(todayLegs,todayDate);
+    else if(holdPoint)buildHoldJourney();
     else syncBuildLeg();
   }
   /* 同期が適用できた時点で校正済み。旅を組み直さないのに旅が無い場合は
@@ -5503,6 +5563,10 @@ try{
         capLines:SYNC.capLines.slice(),
         contextLine:SYNC.contextLine,
         masterToday:!!(S.journey&&S.journey.masterToday),
+        hold:!!(S.journey&&S.journey.hold),
+        dayIsPast:!!SYNC.dayIsPast,
+        holdPoint:SYNC.holdPoint?{name:SYNC.holdPoint.name,lat:SYNC.holdPoint.lat,lng:SYNC.holdPoint.lng}:null,
+        todayDate:SYNC.todayDate||"",
         todayLegs:SYNC.todayLegs?SYNC.todayLegs.length:0,
         todayExpenses:SYNC.todayExpenses?SYNC.todayExpenses.map(function(e){return {label:e.label,yen:e.yen,at:(typeof e.at==="number"?e.at:null)};}):null,
         todayEvents:SYNC.todayEvents?SYNC.todayEvents.map(function(e){return {at:e.at,text:e.text,shown:!!EVENTS_SHOWN[e.at+"|"+e.text]};}):null,
