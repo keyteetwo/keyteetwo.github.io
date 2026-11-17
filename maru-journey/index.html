@@ -5009,8 +5009,9 @@ function syncBuildLeg(){
 /* ============ マスター区間（today.legs）をなぞる旅の組み立て ============
    同期データに今日の区間列（legs）が入っている日は、ページ側では
    経路も時刻表も組み直さない。各区間の departAt／arriveAt をそのまま
-   旅の時計に写し、区間の合間は到着地点での滞在（施設なら滞在、
-   それ以外は次の区間の発車待ち）としてつなぐ。形状だけは手段ごとに
+   旅の時計に写し、区間の合間は到着地点での滞在としてつなぐ（施設・
+   食事などの立ち寄り・次が徒歩など発車時刻を持たない区間の場合は滞在、
+   時刻表のある乗り物の発車を待つ場合だけ発車待ち）。形状だけは手段ごとに
    決める：train は同梱鉄道グラフの経路、walk は既存の道路ルーティング、
    bus は2地点を結ぶ線、plane は大圏の弧。地点名が引けない場合は
    前後の判明している座標で代用し、組み立ては止めない。 */
@@ -5103,9 +5104,22 @@ function buildMasterToday(legs,dateStr){
         if(gapSec>0){
           var atPt=resolved[i-1].coords[resolved[i-1].coords.length-1];
           var isFacility=(masterNameKey(prev.to)===masterNameKey(facilityName));
-          var g=makeLeg(isFacility?"stay":"wait",prev.to,prev.to,[atPt],
-            {staySec:gapSec,note:isFacility?"施設で滞在":"次の区間の出発まで待機"});
-          if(!isFacility)g.depLabel=fmtClock(new Date(l.departAt));
+          /* 合間の時間は「そこで何をしている時間か」で決める。「発車待ち」は
+             時刻表のある乗り物（電車・バス・飛行機・フェリー）の発車を駅・
+             空港・港で待つ場合だけに使う。施設での滞在、その時間帯に費用明細
+             （夕食など）が付く立ち寄り、次の区間が徒歩・タクシーなど発車時刻を
+             持たない移動の場合は、その場所での「立ち寄り（滞在）」として扱う。
+             店で食事をしている時間を発車待ちと表示しないため。 */
+          var hasExpense=(Array.isArray(SYNC.todayExpenses)&&SYNC.todayExpenses.some(function(e){
+            /* 区間の終わり（次の発車時刻ちょうど）の明細は、その区間自身の
+               運賃など次区間に属するものなので、合間の活動には数えない */
+            return e&&typeof e.at==="number"&&e.at>=prev.arriveAt&&e.at<l.departAt;
+          }));
+          var nextScheduled=!!timetableFor(l.mode,0);
+          var isStay=isFacility||hasExpense||!nextScheduled;
+          var g=makeLeg(isStay?"stay":"wait",prev.to,prev.to,[atPt],
+            {staySec:gapSec,note:isStay?(isFacility?"施設で滞在":"立ち寄りで滞在"):"次の区間の出発まで待機"});
+          if(!isStay)g.depLabel=fmtClock(new Date(l.departAt));
           jlegs.push(g);
         }
       }
