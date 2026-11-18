@@ -4355,12 +4355,44 @@ function renderTourList(){
     }
   }
 }
+/* 再生中の旅で、すでに到着が済んだ施設の番号（無ければ -1）。
+   マスターの currentIndex（TOUR.idx）は「今日向かう施設」を指したまま、
+   夜の更新が来るまで進まない。そのため到着した瞬間から翌日のデータが
+   届くまで、上の達成表示だけが下のカード（到着しました）に追いつけ
+   なかった。そこで表示側は、再生状態そのもの――旅の時計が施設への
+   到着区間を過ぎたか――から到着済みの施設を補い、達成表示に反映する。
+   マスターが翌日分で idx を進めてきたら、こちらの補いは自動で消える
+   （新しい日の旅では、過ぎた区間の行き先は前日以前の施設になるため）。 */
+function tourPlaybackArrivedIdx(){
+  if(TOUR.done||!S.journey||!S.journey.cumDur)return -1;
+  var j=S.journey,t=tNow(),best=-1;
+  for(var i=0;i<j.legs.length;i++){
+    if(j.cumDur[i+1]==null||t<j.cumDur[i+1])continue; /* まだ終わっていない区間は数えない */
+    var places=[j.legs[i].to,j.legs[i].from];
+    for(var n=0;n<places.length;n++){
+      var key=masterNameKey(places[n]);
+      if(!key)continue;
+      for(var fi=0;fi<SEAL_TOUR.length;fi++){
+        if(masterNameKey(SEAL_TOUR[fi].name)===key&&fi>best)best=fi;
+      }
+    }
+  }
+  return best;
+}
 function updateTourUI(){
   var total=SEAL_TOUR.length,visited=tourVisitedCount();
+  /* 今日の施設へ到着済みなら、達成表示の側だけ1か所進める（TOUR.idx
+     自体はマスターの値のまま変えない：区間の組み立てや再同期の判定は
+     従来どおりマスター基準で動く） */
+  var arrivedIdx=tourPlaybackArrivedIdx();
+  var arrivedToday=!TOUR.done&&TOUR.active&&arrivedIdx>=TOUR.idx&&TOUR.idx<total;
+  if(arrivedToday)visited=Math.min(total,visited+1);
+  var nextIdx=TOUR.idx+(arrivedToday?1:0);
+  var nextTarget=SEAL_TOUR[Math.min(nextIdx,total-1)];
   var bar=$("tourBar"),main=$("tourBarMain"),sub=$("tourBarSub"),fill=$("tourBarFill");
   if(!main)return;
   if(fill)fill.style.width=Math.round(100*visited/total)+"%";
-  if(bar)bar.classList.toggle("done",TOUR.done);
+  if(bar)bar.classList.toggle("done",TOUR.done||visited>=total);
   var target=SEAL_TOUR[Math.min(TOUR.idx,total-1)];
   /* 開始前の表示に使う開始日時：同期データの startAt（TOUR.startAt へ反映済み）を
      優先し、無ければ同梱の固定開始日時を使う */
@@ -4371,11 +4403,14 @@ function updateTourUI(){
   }else if(TOUR.active&&tourIsScheduled()){
     main.innerHTML="<b>"+visited+" / "+total+" か所</b> ・ 明日スタート予定 ・ 次は <span class=\"tb-next\">"+(TOUR.idx+1)+"か所目 "+escHtml(target.name)+"</span>";
     sub.textContent="出発: 大阪上本町駅 ・ "+tourStartLabel(TOUR.startAt)+" スタート予定 ・ ゴール（海遊館）まで残り "+(total-visited)+" か所";
+  }else if(TOUR.active&&visited>=total){
+    main.innerHTML="<b>"+total+" / "+total+" か所</b> ・ ツアー完了！ ゴールの海遊館に到着しました";
+    sub.textContent="出発: 大阪上本町駅 ・ 国内のアザラシ施設60か所をすべて巡りました。おつかれさまでした。";
   }else if(TOUR.active){
-    main.innerHTML="<b>"+visited+" / "+total+" か所</b> ・ 次は <span class=\"tb-next\">"+(TOUR.idx+1)+"か所目 "+escHtml(target.name)+"</span>";
-    sub.textContent="出発: 大阪上本町駅 ・ ゴール（海遊館）まで残り "+(total-visited)+" か所 ・ "+target.area;
+    main.innerHTML="<b>"+visited+" / "+total+" か所</b> ・ 次は <span class=\"tb-next\">"+(nextIdx+1)+"か所目 "+escHtml(nextTarget.name)+"</span>";
+    sub.textContent="出発: 大阪上本町駅 ・ ゴール（海遊館）まで残り "+(total-visited)+" か所 ・ "+nextTarget.area;
   }else if(visited>0){
-    main.innerHTML="<b>"+visited+" / "+total+" か所</b> ・ 次は <span class=\"tb-next\">"+(TOUR.idx+1)+"か所目 "+escHtml(target.name)+"</span>";
+    main.innerHTML="<b>"+visited+" / "+total+" か所</b> ・ 次は <span class=\"tb-next\">"+(nextIdx+1)+"か所目 "+escHtml(nextTarget.name)+"</span>";
     sub.textContent="出発: 大阪上本町駅 ・ ゴール（海遊館）まで残り "+(total-visited)+" か所 ・ 同期データに合わせて自動で進みます";
   }else{
     main.innerHTML="<b>0 / "+total+" か所</b> ・ 出発待ち ・ 次は <span class=\"tb-next\">1か所目 "+escHtml(target.name)+"</span>";
@@ -4398,9 +4433,9 @@ function updateTourUI(){
     var item=$("tourItem"+i);if(!item)continue;
     var st=item.querySelector(".tstat");
     item.classList.remove("visited","current");
-    if(TOUR.done||i<TOUR.idx){item.classList.add("visited");st.textContent="訪問済み";}
-    else if(i===TOUR.idx&&TOUR.active){item.classList.add("current");st.textContent=(S.journey&&S.finished)?"到着しました":"向かっています";}
-    else if(i===TOUR.idx&&visited>0){item.classList.add("current");st.textContent="次の目的地";}
+    if(TOUR.done||i<TOUR.idx||(arrivedToday&&i===TOUR.idx)){item.classList.add("visited");st.textContent="訪問済み";}
+    else if(i===nextIdx&&TOUR.active){item.classList.add("current");st.textContent=arrivedToday?"次の目的地":((S.journey&&S.finished)?"到着しました":"向かっています");}
+    else if(i===nextIdx&&visited>0){item.classList.add("current");st.textContent="次の目的地";}
     else st.textContent="これから";
   }
   /* まるカード：ツアー中は「今日の目的地」と到着見込みを優先表示する */
