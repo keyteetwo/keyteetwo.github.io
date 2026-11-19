@@ -580,7 +580,7 @@ input[type="text"]{width:100%;border:1px solid var(--line);border-radius:10px;pa
         <span class="tb-main" id="tourBarMain"><b>0 / 60 か所</b> ・ 次は 1か所目 伊勢シーパラダイス</span>
         <button class="tb-toggle" id="tourBarToggle" type="button" aria-expanded="false" aria-label="ツアーの詳細を開く">▾</button>
       </div>
-      <div class="tb-row tb-subrow" style="margin-top:2px"><span class="tb-sub" id="tourBarSub">出発: 大阪上本町駅 ・ 明日 7:00 スタート予定 ・ ゴール（海遊館）まで残り 60 か所</span></div>
+      <div class="tb-row tb-subrow" style="margin-top:2px"><span class="tb-sub" id="tourBarSub">出発: JR大阪駅 ・ 明日 7:00 スタート予定 ・ ゴール（海遊館）まで残り 60 か所</span></div>
       <div class="tb-track" aria-hidden="true"><i id="tourBarFill" style="width:0%"></i></div>
       <span class="tb-data" id="tourDataStamp" hidden></span>
     </div>
@@ -785,7 +785,7 @@ input[type="text"]{width:100%;border:1px solid var(--line);border-radius:10px;pa
           <pre class="sync-diag-log" id="syncDiagLog" aria-label="同期取得の診断ログ"></pre>
         </div>
       </details>
-      <details class="note-fold"><summary>ツアーの進め方と旅のルール（説明）</summary><p class="tour-note">施設名をタップすると地図がその場所へ寄ります（見るだけです。目的地は変わりません）。訪問順は、アザラシ施設まとめ（sealcloudfb.web.app）の国内施設から、閉館した施設と現在アザラシがいない施設を除いた60か所です。ツアーの出発は大阪上本町駅に固定で、スタートは明日7:00です。現在地がどこでも、始まると出発地は自動で大阪上本町駅にセットされます。ツアー中も通常の旅と同じルールです：簡易時刻表で発車待ちをし、夜はホテルに泊まって翌朝7時に再開し、電車を優先してタクシーは最終手段、電車がある区間では長距離バス（高速バス含む）を使わずバスは電車のない短い接続だけ（電車のない区間では高速バスも可）、飛行機は別扱いで常識的に選ばれる長距離では電車があっても可、旅費は区間ごとに概算で計上します。到着すると次の施設が自動で目的地になります。ツアー中は、節目でほかの行き方や乗り継ぎ案の候補は出さず、決まった次の施設へそのまま自動で進みます（行き方や乗り継ぎ案は優先ルールで自動で決まります）。</p></details>
+      <details class="note-fold"><summary>ツアーの進め方と旅のルール（説明）</summary><p class="tour-note">施設名をタップすると地図がその場所へ寄ります（見るだけです。目的地は変わりません）。訪問順は、アザラシ施設まとめ（sealcloudfb.web.app）の国内施設から、閉館した施設と現在アザラシがいない施設を除いた60か所です。ツアーの出発はJR大阪駅に固定で、スタートは明日7:00です。現在地がどこでも、始まると出発地は自動でJR大阪駅にセットされます。ツアー中も通常の旅と同じルールです：簡易時刻表で発車待ちをし、夜はホテルに泊まって翌朝7時に再開し、電車を優先してタクシーは最終手段、電車がある区間では長距離バス（高速バス含む）を使わずバスは電車のない短い接続だけ（電車のない区間では高速バスも可）、飛行機は別扱いで常識的に選ばれる長距離では電車があっても可、旅費は区間ごとに概算で計上します。到着すると次の施設が自動で目的地になります。ツアー中は、節目でほかの行き方や乗り継ぎ案の候補は出さず、決まった次の施設へそのまま自動で進みます（行き方や乗り継ぎ案は優先ルールで自動で決まります）。</p></details>
     </section>
     <button class="reload-btn" id="reloadBtn" type="button">再読み込み</button>
   </aside>
@@ -2252,7 +2252,7 @@ function updateUI(snap){
   else if(leg.mode==="wait"){pill.classList.add("wait");st.textContent="発車待ち"+(leg.depLabel?"（"+leg.depLabel+"発）":"");}
   else if(leg.mode==="hotel"){pill.classList.add("hotel");st.textContent="ホテルで宿泊中";}
   else{ if(leg.mode!=="walk")pill.classList.add(leg.mode); st.textContent=leg.to+"へ移動中"; }
-  /* ツアーの明日スタート待ち：開始時刻までは大阪上本町駅で待機中と表示する */
+  /* ツアーの明日スタート待ち：開始時刻まではJR大阪駅で待機中と表示する */
   if(S.tourMode&&typeof TOUR!=="undefined"&&TOUR&&TOUR.active&&TOUR.idx===0&&TOUR.startAt&&Date.now()<TOUR.startAt&&!S.finished){
     pill.className="pill wait";st.textContent="出発待ち（"+tourStartLabel(TOUR.startAt)+"）";
   }
@@ -2840,7 +2840,7 @@ function loadJourney(j,key,from,to){
   S.finished=false;S.curLeg=-1;S.album=0;S.choice=null;S.choiceFor=-1;var cpLJ=$("choicePanel");if(cpLJ)cpLJ.hidden=true;
   S.rate=1;S.baseT=0;S.maxT=0;
   var anchorNow=Date.now();
-  /* ツアー初回は「明日から」：出発は翌朝7時に固定し、それまでは出発地（大阪上本町駅）で待機する。
+  /* ツアー初回は「明日から」：出発は翌朝7時に固定し、それまでは出発地（JR大阪駅）で待機する。
      anchorWall／startWall を未来に置くことで、tNow() は開始時刻まで 0 のままになり、位置は出発地に留まる。 */
   if(S.tourMode&&typeof TOUR!=="undefined"&&TOUR&&TOUR.active&&TOUR.idx===0&&TOUR.startAt&&TOUR.startAt>anchorNow)anchorNow=TOUR.startAt;
   /* 同期データの「今日の出発時刻」が未来の間は、現在地で出発待ちにする（開始待ちと同じ仕組み） */
@@ -2919,6 +2919,7 @@ addPlace("皇居外苑",35.68170,139.75900,["二重橋"]);
 addPlace("新宿御苑（新宿門）",35.68795,139.71209,["新宿御苑新宿門"]);
 addPlace("大阪城公園",34.68849,135.53415);
 addPlace("大阪上本町駅",34.6657,135.5214,["上本町","上本町駅","大阪上本町"]);
+addPlace("JR大阪駅",34.7024,135.4959,["大阪駅","JR大阪"]);
 addPlace("浅草寺",35.71000,139.79670,["雷門","浅草"]);
 [
  ["札幌駅",43.0687,141.3508],["小樽駅",43.1975,141.0031],["函館駅",41.7738,140.7263],["旭川駅",43.7628,142.3589],["釧路駅",42.9815,144.3823],
@@ -4314,10 +4315,10 @@ function showIdleState(){
    施設に到着（区間の旅が終了）したら、次の施設を自動で目的地にして
    次の区間を出発する。60か所目（海遊館）に着いたらツアー完了。 */
 var TOUR_KEY="maruSealTourV1";
-/* ツアーのスタート地点は大阪上本町駅（近鉄）に固定。スタートは明日7:00。
+/* ツアーのスタート地点はJR大阪駅に固定。スタートは明日7:00。
    現在位置がどこでも、開始／やり直しでは出発地を自動でここにセットする。 */
-var TOUR_START_NAME="大阪上本町駅";
-var TOUR_START={name:TOUR_START_NAME,lat:34.6657,lng:135.5214};
+var TOUR_START_NAME="JR大阪駅";
+var TOUR_START={name:TOUR_START_NAME,lat:34.7024,lng:135.4959};
 /* 同梱の固定開始日時（2026年11月16日7:00）。同期データが取得できないときの
    自動開始の保険に使う。同期データの startAt があればそちらが優先される。 */
 var TOUR_FIXED_START=new Date(2026,10,16,7,0,0,0).getTime();
@@ -4426,22 +4427,22 @@ function updateTourUI(){
   var waitStartAt=TOUR.startAt||TOUR_FIXED_START;
   if(TOUR.done){
     main.innerHTML="<b>60 / 60 か所</b> ・ ツアー完了！ ゴールの海遊館に到着しました";
-    sub.textContent="出発: 大阪上本町駅 ・ 国内のアザラシ施設60か所をすべて巡りました。おつかれさまでした。";
+    sub.textContent="出発: JR大阪駅 ・ 国内のアザラシ施設60か所をすべて巡りました。おつかれさまでした。";
   }else if(TOUR.active&&tourIsScheduled()){
     main.innerHTML="<b>"+visited+" / "+total+" か所</b> ・ 明日スタート予定 ・ 次は <span class=\"tb-next\">"+(TOUR.idx+1)+"か所目 "+escHtml(target.name)+"</span>";
-    sub.textContent="出発: 大阪上本町駅 ・ "+tourStartLabel(TOUR.startAt)+" スタート予定 ・ ゴール（海遊館）まで残り "+(total-visited)+" か所";
+    sub.textContent="出発: JR大阪駅 ・ "+tourStartLabel(TOUR.startAt)+" スタート予定 ・ ゴール（海遊館）まで残り "+(total-visited)+" か所";
   }else if(TOUR.active&&visited>=total){
     main.innerHTML="<b>"+total+" / "+total+" か所</b> ・ ツアー完了！ ゴールの海遊館に到着しました";
-    sub.textContent="出発: 大阪上本町駅 ・ 国内のアザラシ施設60か所をすべて巡りました。おつかれさまでした。";
+    sub.textContent="出発: JR大阪駅 ・ 国内のアザラシ施設60か所をすべて巡りました。おつかれさまでした。";
   }else if(TOUR.active){
     main.innerHTML="<b>"+visited+" / "+total+" か所</b> ・ 次は <span class=\"tb-next\">"+(nextIdx+1)+"か所目 "+escHtml(nextTarget.name)+"</span>";
-    sub.textContent="出発: 大阪上本町駅 ・ ゴール（海遊館）まで残り "+(total-visited)+" か所 ・ "+nextTarget.area;
+    sub.textContent="出発: JR大阪駅 ・ ゴール（海遊館）まで残り "+(total-visited)+" か所 ・ "+nextTarget.area;
   }else if(visited>0){
     main.innerHTML="<b>"+visited+" / "+total+" か所</b> ・ 次は <span class=\"tb-next\">"+(nextIdx+1)+"か所目 "+escHtml(nextTarget.name)+"</span>";
-    sub.textContent="出発: 大阪上本町駅 ・ ゴール（海遊館）まで残り "+(total-visited)+" か所 ・ 同期データに合わせて自動で進みます";
+    sub.textContent="出発: JR大阪駅 ・ ゴール（海遊館）まで残り "+(total-visited)+" か所 ・ 同期データに合わせて自動で進みます";
   }else{
     main.innerHTML="<b>0 / "+total+" か所</b> ・ 出発待ち ・ 次は <span class=\"tb-next\">1か所目 "+escHtml(target.name)+"</span>";
-    sub.textContent="出発: 大阪上本町駅 ・ "+tourStartLabel(waitStartAt)+" スタート予定 ・ ゴール（海遊館）まで残り "+total+" か所 ・ スタート時刻になると、大阪上本町駅から自動で出発します";
+    sub.textContent="出発: JR大阪駅 ・ "+tourStartLabel(waitStartAt)+" スタート予定 ・ ゴール（海遊館）まで残り "+total+" か所 ・ スタート時刻になると、JR大阪駅から自動で出発します";
   }
   /* 旅がまだ組まれていない開始前は、まるカードのピルも出発待ち表示にする
      （開始日時は同期データ優先・無ければ固定値）。旅があるときのピルは
@@ -4454,7 +4455,7 @@ function updateTourUI(){
     }
   }
   var ps=$("tourPanelSub");
-  if(ps)ps.textContent=TOUR.done?"全60か所を巡り終えました":("全60か所 ・ "+visited+"か所訪問済み ・ 出発は大阪上本町駅 ・ ゴールは海遊館");
+  if(ps)ps.textContent=TOUR.done?"全60か所を巡り終えました":("全60か所 ・ "+visited+"か所訪問済み ・ 出発はJR大阪駅 ・ ゴールは海遊館");
   /* 一覧の状態表示 */
   for(var i=0;i<total;i++){
     var item=$("tourItem"+i);if(!item)continue;
@@ -4474,19 +4475,19 @@ function updateTourUI(){
       tt.hidden=false;
       $("tourTodayK").textContent="ツアー出発予定（明日スタート ・ "+(TOUR.idx+1)+" / "+total+" か所目）";
       $("tourTodayName").textContent=target.name;
-      $("tourTodayMeta").innerHTML="出発: <b>大阪上本町駅</b> ・ "+escHtml(tourStartLabel(TOUR.startAt))+" 出発予定<br>"+escHtml(target.area)+" ・ スタート時刻までは大阪上本町駅で待機します";
+      $("tourTodayMeta").innerHTML="出発: <b>JR大阪駅</b> ・ "+escHtml(tourStartLabel(TOUR.startAt))+" 出発予定<br>"+escHtml(target.area)+" ・ スタート時刻まではJR大阪駅で待機します";
     }else if(TOUR.active){
       tt.hidden=false;
       $("tourTodayK").textContent="今日の目的地（ツアー "+(TOUR.idx+1)+" / "+total+" か所目）";
       $("tourTodayName").textContent=target.name;
       var eta=$("metaEta")?$("metaEta").textContent:"—";
       var nxt=SEAL_TOUR[TOUR.idx+1];
-      $("tourTodayMeta").innerHTML=(TOUR.idx===0?("出発: <b>大阪上本町駅</b><br>"):"")+escHtml(target.area)+" ・ 到着見込み <b>"+escHtml(eta)+"</b>"+(nxt?("<br>その次は "+escHtml(nxt.name)+"（"+escHtml(nxt.area)+"）"):"<br>ここがゴールです");
+      $("tourTodayMeta").innerHTML=(TOUR.idx===0?("出発: <b>JR大阪駅</b><br>"):"")+escHtml(target.area)+" ・ 到着見込み <b>"+escHtml(eta)+"</b>"+(nxt?("<br>その次は "+escHtml(nxt.name)+"（"+escHtml(nxt.area)+"）"):"<br>ここがゴールです");
     }else if(visited===0){
       tt.hidden=false;
       $("tourTodayK").textContent="ツアー出発予定（まだ始まっていません）";
       $("tourTodayName").textContent=target.name;
-      $("tourTodayMeta").innerHTML="出発: <b>大阪上本町駅</b> ・ "+escHtml(tourStartLabel(TOUR.startAt||TOUR_FIXED_START))+" スタート予定<br>"+escHtml(target.area)+" ・ スタート時刻になると、大阪上本町駅から自動で出発します";
+      $("tourTodayMeta").innerHTML="出発: <b>JR大阪駅</b> ・ "+escHtml(tourStartLabel(TOUR.startAt||TOUR_FIXED_START))+" スタート予定<br>"+escHtml(target.area)+" ・ スタート時刻になると、JR大阪駅から自動で出発します";
     }else tt.hidden=true;
   }
 }
@@ -4512,7 +4513,7 @@ function startSealTour(){
   S.choice=null;S.choiceFor=-1;var cpS=$("choicePanel");if(cpS)cpS.hidden=true;
   var fromName,startOv=null;
   if(TOUR.idx===0){
-    /* スタート地点は大阪上本町駅に固定。現在位置がどこでも自動でここにセットする（利用者指示「自動で更新して」） */
+    /* スタート地点はJR大阪駅に固定。現在位置がどこでも自動でここにセットする（利用者指示「自動で更新して」） */
     fromName=TOUR_START_NAME;startOv=tourStartOv();
     if(!TOUR.startAt)TOUR.startAt=tourTomorrowStart();
   }else{
@@ -4538,7 +4539,7 @@ function startSealTour(){
   var dest=SEAL_TOUR[TOUR.idx];
   setRouteInputs(fromName,dest.name);
   if(startOv){try{setResolved("from",{name:fromName,lat:startOv.lat,lng:startOv.lng},fromName);}catch(e){}}
-  if(TOUR.idx===0)addLog("アザラシめぐりツアー開始：出発は大阪上本町駅にセットしました。"+tourStartLabel(TOUR.startAt)+" スタート予定で、1か所目「"+dest.name+"」へ向かいます");
+  if(TOUR.idx===0)addLog("アザラシめぐりツアー開始：出発はJR大阪駅にセットしました。"+tourStartLabel(TOUR.startAt)+" スタート予定で、1か所目「"+dest.name+"」へ向かいます");
   else addLog("アザラシめぐりツアー開始："+(TOUR.idx+1)+"か所目「"+dest.name+"」へ向かいます");
   buildCustom(fromName,dest.name,null,startOv);
 }
@@ -4553,7 +4554,7 @@ function stopSealTour(silent){
   if(!silent)addLog("アザラシめぐりツアーをやめました（進み具合はツアー専用の記録に残っています。通常の旅はそのまま続けられます）");
 }
 function resetSealTour(){
-  /* やり直しでも出発地点は大阪上本町駅に戻し、スタートは明日7:00にセットする。
+  /* やり直しでも出発地点はJR大阪駅に戻し、スタートは明日7:00にセットする。
      状態はツアー専用キー（maruSealTourV1）に保存し、既存の旅ログ（maruJourneyAnchorV1）は消さない。 */
   TOUR.active=false;TOUR.done=false;TOUR.idx=0;TOUR.fromName=TOUR_START_NAME;TOUR.startOv=tourStartOv();TOUR.startAt=tourTomorrowStart();TOUR.advancing=false;
   S.tourMode=false;
@@ -4564,7 +4565,7 @@ function resetSealTour(){
   var tiR=$("toInput");if(tiR)tiR.value=SEAL_TOUR[0].name;
   try{setResolved("from",tourStartOv(),TOUR_START_NAME);}catch(e){}
   renderTourList();
-  try{addLog("ツアーを最初からやり直します。出発は大阪上本町駅・"+tourStartLabel(TOUR.startAt)+" スタート予定です");}catch(e){}
+  try{addLog("ツアーを最初からやり直します。出発はJR大阪駅・"+tourStartLabel(TOUR.startAt)+" スタート予定です");}catch(e){}
 }
 function completeSealTour(){
   /* 最終施設（海遊館）への到着が確定しているときは、その訪問記録も残す */
@@ -5051,7 +5052,7 @@ function applySyncAlbum(gated){
   renderAlbum();
 }
 /* 同期データの現在区間を、既存のツアー開始／復元と同じ手順で組み直す。
-   出発地は idx=0 なら大阪上本町駅、それ以外は直前の施設。 */
+   出発地は idx=0 ならJR大阪駅、それ以外は直前の施設。 */
 function syncBuildLeg(){
   var dest=SEAL_TOUR[TOUR.idx];if(!dest)return;
   var fromName,startOv=null;
@@ -5108,7 +5109,8 @@ function buildHoldJourney(){
    「大阪上本町駅」「伊勢市駅」「二見浦駅」と同一地点として照合する。 */
 function masterNameKey(s){return String(s||"").replace(/駅$/,"");}
 function masterResolvePoint(name){
-  if(masterNameKey(name)===masterNameKey(TOUR_START_NAME))return {name:name,lat:TOUR_START.lat,lng:TOUR_START.lng};
+  var mk0=masterNameKey(name);
+  if(mk0===masterNameKey(TOUR_START_NAME)||mk0==="大阪"||mk0==="大阪上本町")return {name:name,lat:TOUR_START.lat,lng:TOUR_START.lng};
   var key=masterNameKey(name);
   for(var i=0;i<SEAL_TOUR.length;i++)if(masterNameKey(SEAL_TOUR[i].name)===key)return {name:name,lat:SEAL_TOUR[i].lat,lng:SEAL_TOUR[i].lng};
   var d=dictLookup(name);
