@@ -254,8 +254,8 @@ input[type="text"]{width:100%;border:1px solid var(--line);border-radius:10px;pa
 .leg .ls{flex:0 1 auto;min-width:0;max-width:40%;font-size:11.5px;font-weight:700;color:var(--ink2);text-align:right;overflow-wrap:break-word;word-break:normal}
 .leg .lexp{display:block;margin-top:3px;font-size:12px;font-weight:700;color:var(--rose)}
 .leg .lexp[hidden]{display:none}
-.leg.cur{background:#fdf0f2;border-radius:10px;padding-left:8px;padding-right:8px}
-.leg.cur .ls{color:var(--maroon)}
+.leg.cur{background:transparent;border:1.5px solid var(--rose);border-radius:10px;padding-left:8px;padding-right:8px;margin:3px 0}
+.leg.cur .ls{color:var(--rose)}
 .leg.done .lb{opacity:.55}
 .xfer{font-size:12px;color:var(--ink2);padding:2px 0 2px 47px}
 .choice-opts{display:flex;flex-direction:column;gap:8px;margin-top:10px}
@@ -317,8 +317,8 @@ input[type="text"]{width:100%;border:1px solid var(--line);border-radius:10px;pa
 .cost-day .cd-item{display:flex;gap:12px;align-items:baseline;padding:2.5px 0;line-height:1.45}
 .cost-day .cd-item .cd-label{flex:1 1 auto;min-width:0;color:var(--ink2);overflow-wrap:break-word;word-break:normal}
 .cost-day .cd-item .cd-amt{flex:0 0 auto;font-weight:700;font-variant-numeric:tabular-nums}
-.cost-day.cur{background:#fdf0f2;border-radius:8px;padding-left:6px;padding-right:6px}
-.cost-day.cur .cd-state{color:var(--maroon)}
+.cost-day.cur{background:transparent;border:1.5px solid var(--rose);border-radius:8px;padding-left:6px;padding-right:6px}
+.cost-day.cur .cd-state{color:var(--rose)}
 .cost-note{font-size:11.5px;color:var(--ink2);line-height:1.6;margin:9px 0 0}
 .reload-btn{width:100%;border:1px solid var(--line);background:var(--surface2);border-radius:11px;padding:10px;font-size:13.5px;font-weight:700;color:var(--ink);min-height:2.6rem}
 /* ミニカード（シートを閉じたとき） */
@@ -420,10 +420,9 @@ input[type="text"]{width:100%;border:1px solid var(--line);border-radius:10px;pa
 .tour-bar .tb-toggle{display:none}
 .mc-toggle{display:none}
 @media (min-width:900px){ .base-switch{top:auto;bottom:16px} }
-.tour-today{margin-top:10px;background:#fdf0f2;border:1.5px solid var(--pinkline);border-radius:12px;padding:10px 12px}
-@media (prefers-color-scheme: dark){ .tour-today{background:#2c1d22} }
+.tour-today{margin-top:10px;background:transparent;border:1.5px solid var(--rose);border-radius:12px;padding:10px 12px}
 .tour-today[hidden]{display:none}
-.tour-today .tt-k{font-size:11.5px;font-weight:800;color:var(--maroon)}
+.tour-today .tt-k{font-size:11.5px;font-weight:800;color:var(--rose)}
 .tour-today .tt-name{font-size:17px;font-weight:800;line-height:1.3;margin-top:1px}
 .tour-today .tt-meta{font-size:12.5px;color:var(--ink2);margin-top:3px}
 .tour-today .tt-meta b{color:var(--ink)}
@@ -444,7 +443,7 @@ input[type="text"]{width:100%;border:1px solid var(--line);border-radius:10px;pa
 .tour-item.visited .tn{background:#188038;color:#fff}
 .tour-item.visited .tname{color:var(--ink2)}
 .tour-item.visited .tstat{background:#e2f2e4;color:#146c2e}
-.tour-item.current{background:#fdf0f2}
+.tour-item.current{background:transparent;box-shadow:inset 0 0 0 1.5px var(--rose)}
 .tour-item.current .tn{background:var(--maroon);color:#fff}
 .tour-item.current .tstat{background:var(--maroon);color:#fff}
 .tour-note{font-size:11.5px;color:var(--ink2);line-height:1.6;margin:8px 0 0}
