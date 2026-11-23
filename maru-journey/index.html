@@ -5102,7 +5102,8 @@ function buildHoldJourney(){
    食事などの立ち寄り・次が徒歩など発車時刻を持たない区間の場合は滞在、
    時刻表のある乗り物の発車を待つ場合だけ発車待ち）。形状だけは手段ごとに
    決める：train は同梱鉄道グラフの経路、walk は既存の道路ルーティング、
-   bus は2地点を結ぶ線、plane は大圏の弧。地点名が引けない場合は
+   bus は2地点を結ぶ線、plane は大圏の弧。ただし区間に道路形状（path）が
+   あれば、手段によらずその形状をなぞる。地点名が引けない場合は
    前後の判明している座標で代用し、組み立ては止めない。 */
 /* 駅名の表記ゆれ（末尾の「駅」の有無）を吸収する比較キー。
    マスター側が「大阪上本町」「伊勢市」「二見浦」と書いても、ページ側の
@@ -5119,8 +5120,22 @@ function masterResolvePoint(name){
   if(d)return {name:name,lat:d.lat,lng:d.lng};
   return null;
 }
-function masterLegCoords(mode,A,B){
+function masterLegCoords(mode,A,B,path){
   var aPt=[A.lng,A.lat],bPt=[B.lng,B.lat];
+  if(Array.isArray(path)&&path.length>=2){
+    /* マスターが道路形状（path、[緯度,経度] の配列）を持つ区間は、
+       手段によらずその形状をなぞる（海岸沿いの道路を走るバスが
+       海を横切って表示されないように）。[経度,緯度] へ変換し、
+       連続する重複点は除く。 */
+    var pc=[aPt];
+    path.forEach(function(p){
+      var q=[p[1],p[0]],last=pc[pc.length-1];
+      if(last[0]!==q[0]||last[1]!==q[1])pc.push(q);
+    });
+    var lastB=pc[pc.length-1];
+    if(lastB[0]!==bPt[0]||lastB[1]!==bPt[1])pc.push(bPt);
+    if(pc.length>=2)return Promise.resolve(pc);
+  }
   if(mode==="train"){
     try{
       var route=findRailRoute(A,B,30000);
@@ -5144,7 +5159,7 @@ function masterLegCoords(mode,A,B){
     return Promise.resolve(interpLine(aPt,bPt,16));
   }
   if(mode==="plane")return Promise.resolve(arcPoints(aPt,bPt,48));
-  return Promise.resolve(interpLine(aPt,bPt,24)); /* bus は2地点を結ぶ線でよい */
+  return Promise.resolve(interpLine(aPt,bPt,24)); /* bus は2地点を結ぶ線でよい（path がある場合は冒頭でその形状をなぞる） */
 }
 function buildMasterToday(legs,dateStr){
   var buildKey=SYNC.lastKey+"@master@"+dateStr;
@@ -5179,7 +5194,7 @@ function buildMasterToday(legs,dateStr){
   legs.forEach(function(l,i){
     chain=chain.then(function(acc){
       var A=fillPt(i*2),B=fillPt(i*2+1);
-      return masterLegCoords(l.mode,A,B).then(function(coords){acc.push({l:l,coords:coords});return acc;});
+      return masterLegCoords(l.mode,A,B,l.path).then(function(coords){acc.push({l:l,coords:coords});return acc;});
     });
   });
   chain.then(function(resolved){
@@ -5314,6 +5329,20 @@ function applySyncData(data){
              typeof l.toLng==="number"&&isFinite(l.toLng)&&Math.abs(l.toLng)<=180){
             rec.toLat=l.toLat;rec.toLng=l.toLng;
           }
+          /* 道路形状（任意）：[緯度,経度] の配列。海岸沿いの道路を走るバス
+             など、2地点を直線で結ぶと実経路とかけ離れる区間の形状を
+             マスターが渡す。全点が数値で範囲内のときだけ採用する
+             （最大200点、2点未満は不採用）。 */
+          if(Array.isArray(l.path)){
+            var pv=[],pOk=true;
+            for(var pi=0;pi<l.path.length&&pi<200;pi++){
+              var pp=l.path[pi];
+              if(!Array.isArray(pp)||pp.length<2||typeof pp[0]!=="number"||typeof pp[1]!=="number"||
+                 !isFinite(pp[0])||!isFinite(pp[1])||Math.abs(pp[0])>90||Math.abs(pp[1])>180){pOk=false;break;}
+              pv.push([pp[0],pp[1]]);
+            }
+            if(pOk&&pv.length>=2)rec.path=pv;
+          }
           nl.push(rec);
         });
         nl.sort(function(a,b){return a.departAt-b.departAt;});
@@ -5386,7 +5415,8 @@ function applySyncData(data){
   })();
   var legsSig=todayLegs?todayLegs.map(function(l){
     return l.mode+">"+l.from+">"+l.to+"@"+l.departAt+"-"+l.arriveAt+
-      (typeof l.toLat==="number"?"#"+l.toLat+","+l.toLng:"");
+      (typeof l.toLat==="number"?"#"+l.toLat+","+l.toLng:"")+
+      (Array.isArray(l.path)?"~"+l.path.map(function(p){return p[0]+","+p[1];}).join(";"):"");
   }).join(","):"";
   var expSig=todayExpenses?todayExpenses.map(function(e){return e.label+"="+e.yen+"@"+(typeof e.at==="number"?e.at:"");}).join(","):"";
   var evSig=todayEvents?todayEvents.map(function(e){return e.at+":"+e.text;}).join(","):"";
